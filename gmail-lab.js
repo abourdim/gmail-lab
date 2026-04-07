@@ -957,19 +957,30 @@ async function gmailExportFull(format) {
     const fullEmails = [];
 
     for (let i = 0; i < allIds.length; i++) {
-      try {
-        const full = await gmailReadMessage(allIds[i]);
-        fullEmails.push(full);
-      } catch {
-        fullEmails.push({ from: '', to: '', subject: '(failed to read)', date: '', body: '', labels: [] });
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          const full = await gmailReadMessage(allIds[i]);
+          fullEmails.push(full);
+          break;
+        } catch (err) {
+          retries--;
+          if (retries > 0) {
+            log(`⚠️ Retry ${3 - retries}/3 for email ${i + 1}…`, 'info');
+            await new Promise(r => setTimeout(r, 2000));
+          } else {
+            fullEmails.push({ from: '', to: '', subject: '(failed after 3 retries)', date: '', body: '', labels: [] });
+            log(`❌ Skipped email ${i + 1}`, 'error');
+          }
+        }
       }
 
       const pct = 50 + Math.round(((i + 1) / allIds.length) * 50);
       if (fillEl) fillEl.style.width = pct + '%';
       if (textEl) textEl.textContent = `Reading: ${i + 1} / ${allIds.length}`;
 
-      // Small delay every 20 emails to avoid rate limit
-      if ((i + 1) % 20 === 0) await new Promise(r => setTimeout(r, 500));
+      // Delay every 10 emails to avoid rate limit
+      if ((i + 1) % 10 === 0) await new Promise(r => setTimeout(r, 1000));
     }
 
     // Step 3: Download
