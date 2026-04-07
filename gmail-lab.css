@@ -486,6 +486,20 @@
 }
 .gmail-regex-hint:hover { opacity: 1; color: var(--accent); }
 
+/* ═══ SEARCH HINTS ═══ */
+.gmail-search-hints {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px;
+}
+.gmail-search-hints span {
+  font-size: 0.62rem; color: var(--text-muted); opacity: 0.4;
+  cursor: pointer; padding: 1px 5px; border-radius: 4px;
+  border: 1px solid transparent; transition: all .2s;
+}
+.gmail-search-hints span:hover {
+  opacity: 1; color: var(--accent); border-color: var(--border);
+  background: rgba(255,255,255,.04);
+}
+
 /* ═══ COUNT BUTTON ═══ */
 .gmail-count-btn {
   font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;

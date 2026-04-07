@@ -86,6 +86,16 @@
         <div class="gmail-search-row">
           <input class="gmail-search-input" id="customInput" placeholder="Search... e.g. kicklox, didaxis  or  from:mom is:unread" onkeydown="if(event.key==='Enter')runCustomSearch()" disabled />
           <span class="gmail-regex-hint" onclick="openTools();showToolsTab('data')" title="Open MBOX viewer with regex">Regex → 🧰 Data</span>
+          <span class="gmail-search-hints">
+            <span onclick="pasteToSearch('a, b')" title="Comma = search multiple">a, b = multi</span>
+            <span onclick="pasteToSearch('from:')" title="from:name or email">from:</span>
+            <span onclick="pasteToSearch('to:')" title="to:name or email">to:</span>
+            <span onclick="pasteToSearch('subject:')" title="subject:keyword">subject:</span>
+            <span onclick="pasteToSearch('is:unread')" title="Unread only">unread</span>
+            <span onclick="pasteToSearch('has:attachment')" title="With files">attach</span>
+            <span onclick="pasteToSearch('newer_than:7d')" title="Last 7 days">7d</span>
+            <span onclick="pasteToSearch('OR')" title="Combine with OR">OR</span>
+          </span>
           <button class="gmail-search-btn" id="customSend" onclick="runCustomSearch()" disabled>🔍</button>
           <button class="gmail-save-search-btn" onclick="saveCurrentSearch()" title="Save this search">⭐</button>
         </div>
