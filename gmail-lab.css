@@ -479,6 +479,14 @@
 /* ═══ DIGEST ═══ */
 .gmail-digest { margin-top: 8px; }
 
+/* ═══ COUNT BUTTON ═══ */
+.gmail-count-btn {
+  font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted); cursor: pointer; white-space: nowrap;
+}
+.gmail-count-btn:hover { background: rgba(255,255,255,.06); color: var(--accent); }
+
 /* ═══ SAVE SEARCH BUTTONS ═══ */
 .gmail-save-search-btn, .gmail-save-result-btn {
   background: transparent; border: 1px solid var(--border);

@@ -464,6 +464,7 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
     <div class="gmail-results-header">
       <span class="gmail-results-title">📨 ${gmailEscHtml(title)}</span>
       <span class="gmail-results-stats" id="resultsStats">${statsText}</span>
+      <button class="gmail-count-btn" onclick="gmailExactCount()" title="Get exact count">🔢 Count</button>
       <button class="gmail-save-result-btn" onclick="saveSearch('${gmailEscJs(query||'')}','${gmailEscJs(title||'')}')" title="Save this search">⭐</button>
       <div class="gmail-export-wrap">
         <button class="gmail-export-btn" onclick="toggleExportMenu()">⬇️ Export</button>
@@ -740,6 +741,40 @@ function gmailBuildExamples() {
   });
 }
 
+/* ═══════ EXACT COUNT ═══════ */
+
+async function gmailExactCount() {
+  if (!gmailAccessToken || !gmailLastQuery) { showToast('Search first', 1500); return; }
+  if (!(await gmailEnsureToken())) return;
+
+  const statsEl = document.getElementById('resultsStats');
+  if (statsEl) statsEl.textContent = 'Counting…';
+  log(`🔢 Counting exact results for: ${gmailLastQuery}`, 'info');
+
+  let total = 0;
+  let pageToken = null;
+
+  try {
+    do {
+      const p = { userId: 'me', q: gmailLastQuery, maxResults: 500 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      total += (r.result.messages || []).length;
+      pageToken = r.result.nextPageToken;
+      if (statsEl) statsEl.textContent = `Counting… ${total}`;
+    } while (pageToken);
+
+    gmailTotalFound = total;
+    const statsText = `${total} found (exact) · showing ${gmailTotalLoaded}`;
+    if (statsEl) statsEl.textContent = statsText;
+    log(`🔢 Exact count: ${total} emails`, 'success');
+    playSound('success');
+  } catch (e) {
+    log('❌ Count failed: ' + (e.message || ''), 'error');
+    if (statsEl) statsEl.textContent = 'Count failed';
+  }
+}
+
 /* ═══════ EXPORT EMAILS ═══════ */
 
 function toggleExportMenu() {
@@ -791,6 +826,40 @@ function emailsToTxt(emails) {
   }).join('\n');
 }
 
+function exportVerifySummary(emails, format) {
+  const total = emails.length;
+  const failed = emails.filter(e => !e.from && !e.subject || (e.subject || '').includes('(error') || (e.subject || '').includes('(failed') || (e.subject || '').includes('(parse error')).length;
+  const ok = total - failed;
+  const senders = new Set(emails.filter(e => e.from).map(e => e.from.toLowerCase())).size;
+  const dates = emails.map(e => e.date).filter(Boolean).map(d => new Date(d)).filter(d => !isNaN(d)).sort((a, b) => a - b);
+  const oldest = dates.length ? dates[0].toLocaleDateString() : 'N/A';
+  const newest = dates.length ? dates[dates.length - 1].toLocaleDateString() : 'N/A';
+  const unread = emails.filter(e => e.unread).length;
+
+  if (format === 'txt') {
+    return `\n\n${'═'.repeat(50)}\n` +
+      `EXPORT VERIFICATION SUMMARY\n` +
+      `${'═'.repeat(50)}\n` +
+      `Total emails in file: ${total}\n` +
+      `Successfully exported: ${ok}\n` +
+      `Failed/skipped: ${failed}\n` +
+      `Unread: ${unread}\n` +
+      `Unique senders: ${senders}\n` +
+      `Date range: ${oldest} → ${newest}\n` +
+      `Exported on: ${new Date().toLocaleString()}\n` +
+      `Query: ${gmailLastQuery || '(all inbox)'}\n` +
+      `${'═'.repeat(50)}\n`;
+  } else if (format === 'csv') {
+    return `\n\n"--- VERIFICATION SUMMARY ---"\n` +
+      `"Total","${total}"\n"OK","${ok}"\n"Failed","${failed}"\n` +
+      `"Unread","${unread}"\n"Senders","${senders}"\n` +
+      `"Date range","${oldest} → ${newest}"\n` +
+      `"Exported","${new Date().toLocaleString()}"\n` +
+      `"Query","${gmailLastQuery || '(all inbox)'}"`;
+  }
+  return '';
+}
+
 function downloadFile(content, filename, type) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -814,11 +883,11 @@ function gmailExportLoaded(format) {
   const prefix = `gmail-${gmailLastTitle.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${ts}`;
 
   if (format === 'csv') {
-    downloadFile(emailsToCsv(gmailLoadedEmails), `${prefix}.csv`, 'text/csv');
+    downloadFile(emailsToCsv(gmailLoadedEmails) + exportVerifySummary(gmailLoadedEmails, 'csv'), `${prefix}.csv`, 'text/csv');
   } else if (format === 'json') {
     downloadFile(emailsToJson(gmailLoadedEmails), `${prefix}.json`, 'application/json');
   } else {
-    downloadFile(emailsToTxt(gmailLoadedEmails), `${prefix}.txt`, 'text/plain');
+    downloadFile(emailsToTxt(gmailLoadedEmails) + exportVerifySummary(gmailLoadedEmails, 'txt'), `${prefix}.txt`, 'text/plain');
   }
   log(`📊 Exported ${gmailLoadedEmails.length} loaded emails as ${format.toUpperCase()}`, 'info');
 }
@@ -912,11 +981,11 @@ async function gmailExportAll(format) {
     const prefix = `gmail-ALL-${gmailLastTitle.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${ts}`;
 
     if (format === 'csv') {
-      downloadFile(emailsToCsv(allEmails), `${prefix}.csv`, 'text/csv');
+      downloadFile(emailsToCsv(allEmails) + exportVerifySummary(allEmails, 'csv'), `${prefix}.csv`, 'text/csv');
     } else if (format === 'json') {
       downloadFile(emailsToJson(allEmails), `${prefix}.json`, 'application/json');
     } else {
-      downloadFile(emailsToTxt(allEmails), `${prefix}.txt`, 'text/plain');
+      downloadFile(emailsToTxt(allEmails) + exportVerifySummary(allEmails, 'txt'), `${prefix}.txt`, 'text/plain');
     }
     log(`📊 Exported ALL ${allEmails.length} emails as ${format.toUpperCase()}`, 'success');
   } catch (e) {
@@ -1065,11 +1134,11 @@ async function gmailExportFull(format) {
     const prefix = `gmail-FULL-${gmailLastTitle.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${ts}`;
 
     if (format === 'csv') {
-      downloadFile(fullEmailToCsv(fullEmails), `${prefix}.csv`, 'text/csv');
+      downloadFile(fullEmailToCsv(fullEmails) + exportVerifySummary(fullEmails, 'csv'), `${prefix}.csv`, 'text/csv');
     } else if (format === 'json') {
       downloadFile(fullEmailToJson(fullEmails), `${prefix}.json`, 'application/json');
     } else {
-      downloadFile(fullEmailToTxt(fullEmails), `${prefix}.txt`, 'text/plain');
+      downloadFile(fullEmailToTxt(fullEmails) + exportVerifySummary(fullEmails, 'txt'), `${prefix}.txt`, 'text/plain');
     }
     log(`📄 Exported ${fullEmails.length} emails with full content as ${format.toUpperCase()}`, 'success');
 
