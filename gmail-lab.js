@@ -337,13 +337,11 @@ async function gmailEnsureToken() {
 
 /* ═══════ GMAIL API ═══════ */
 
-async function gmailSearch(query, maxResults) {
-  maxResults = maxResults || 5;
+async function gmailSearch(query, maxResults, pageToken) {
+  maxResults = (typeof maxResults === 'number') ? maxResults : 8;
   log('🔍 Searching: ' + (query || '(recent)'), 'tx');
   const listParams = { userId: 'me', q: query, maxResults: maxResults };
-  if (arguments[2] && typeof arguments[2] === 'object' && arguments[2].pageToken) {
-    listParams.pageToken = arguments[2].pageToken;
-  }
+  if (pageToken) listParams.pageToken = pageToken;
   const r = await gapi.client.gmail.users.messages.list(listParams);
   const messages = r.result.messages || [];
   const nextPageToken = r.result.nextPageToken || null;
@@ -458,7 +456,7 @@ async function gmailLoadMore(query, pageToken) {
   if (!(await gmailEnsureToken())) return;
   gmailIsLoading = true;
   try {
-    const result = await gmailSearch(query, { pageToken });
+    const result = await gmailSearch(query, 8, pageToken);
     const body = document.querySelector('.gmail-results-body');
     const oldBtn = document.querySelector('.gmail-load-more');
     if (oldBtn) oldBtn.remove();
