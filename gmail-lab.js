@@ -1489,6 +1489,183 @@ function answerGmailQuiz(qi, oi) {
 
 function resetGmailQuiz() { gmQuizAnswers = {}; gmQuizScore = 0; renderGmailQuiz(); }
 
+/* ═══════ DATE RANGE SEARCH ═══════ */
+
+function drPreset(preset) {
+  const now = new Date();
+  const from = document.getElementById('drFrom');
+  const to = document.getElementById('drTo');
+  if (!from || !to) return;
+  to.value = now.toISOString().slice(0, 10);
+
+  const d = new Date(now);
+  switch (preset) {
+    case 'today': d.setHours(0,0,0,0); break;
+    case 'week': d.setDate(d.getDate() - d.getDay()); break;
+    case 'month': d.setDate(1); break;
+    case '3months': d.setMonth(d.getMonth() - 3); break;
+    case 'year': d.setMonth(0); d.setDate(1); break;
+  }
+  from.value = d.toISOString().slice(0, 10);
+  playSound('click');
+}
+
+function drSearch() {
+  const from = document.getElementById('drFrom')?.value;
+  const to = document.getElementById('drTo')?.value;
+  const sender = document.getElementById('drSender')?.value.trim();
+  if (!from && !to) { showToast('Select at least one date', 2000); return; }
+
+  const parts = [];
+  if (from) parts.push(`after:${from.replace(/-/g, '/')}`);
+  if (to) parts.push(`before:${to.replace(/-/g, '/')}`);
+  if (sender) parts.push(`from:${sender} OR to:${sender}`);
+
+  const q = parts.join(' ');
+  const label = `${from || '...'} → ${to || '...'}${sender ? ' (' + sender + ')' : ''}`;
+  gmailRunSearch(q, label);
+  playSound('click');
+}
+
+/* ═══════ EMAIL TEMPLATES ═══════ */
+
+const DEFAULT_TEMPLATES = {
+  professional: [
+    { name: 'Acknowledge receipt', body: 'Thank you for your email. I have received it and will get back to you shortly.\n\nBest regards' },
+    { name: 'Request information', body: 'I hope this message finds you well.\n\nCould you please provide more details about [topic]? I would appreciate any additional information you can share.\n\nThank you in advance.' },
+    { name: 'Follow up', body: 'I wanted to follow up on my previous email regarding [topic]. Could you please provide an update when you get a chance?\n\nThank you for your time.' },
+    { name: 'Meeting request', body: 'I would like to schedule a meeting to discuss [topic]. Would any of the following times work for you?\n\n- [Option 1]\n- [Option 2]\n- [Option 3]\n\nPlease let me know your availability.' },
+  ],
+  polite: [
+    { name: 'Thank you', body: 'JazakAllahu khairan for your help and support. I truly appreciate it.\n\nMay Allah bless you.' },
+    { name: 'Apology for delay', body: 'Assalamu Alaikum,\n\nI sincerely apologize for the delay in responding. [Reason]. I will address your request immediately.\n\nBarakAllahu feek.' },
+    { name: 'Congratulations', body: 'Assalamu Alaikum,\n\nMasha Allah! Congratulations on [achievement]. May Allah continue to bless you with success.\n\nWarm regards' },
+  ],
+  decline: [
+    { name: 'Politely decline', body: 'Thank you for thinking of me. Unfortunately, I am unable to [action] at this time due to [reason].\n\nI hope you understand, and I wish you all the best.' },
+    { name: 'Reschedule', body: 'Thank you for the invitation. Unfortunately, I have a conflict at that time. Would it be possible to reschedule to [alternative time]?\n\nI apologize for any inconvenience.' },
+  ],
+  custom: [],
+};
+
+let emailTemplates = null;
+
+function loadTemplates() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('gmail-templates-custom') || '[]');
+    DEFAULT_TEMPLATES.custom = saved;
+  } catch {}
+  emailTemplates = DEFAULT_TEMPLATES;
+}
+
+function saveCustomTemplates() {
+  try { localStorage.setItem('gmail-templates-custom', JSON.stringify(emailTemplates.custom)); } catch {}
+}
+
+function renderTemplates(category) {
+  const tabs = document.getElementById('tplTabs');
+  const container = document.getElementById('tplContainer');
+  if (!tabs || !container) return;
+
+  const cats = Object.keys(emailTemplates);
+  const labels = { professional: '💼 Professional', polite: '🤝 Polite', decline: '🙅 Decline', custom: '✏️ My Templates' };
+  const activeCat = category || cats[0];
+
+  tabs.innerHTML = cats.map(c =>
+    `<button class="gmail-tpl-tab ${c === activeCat ? 'active' : ''}" onclick="renderTemplates('${c}')">${labels[c] || c}</button>`
+  ).join('');
+
+  const tpls = emailTemplates[activeCat] || [];
+  if (!tpls.length) {
+    container.innerHTML = '<p style="text-align:center;opacity:0.4;padding:12px">No templates yet</p>';
+    return;
+  }
+
+  container.innerHTML = tpls.map((t, i) => `
+    <div class="gmail-tpl-item">
+      <div class="gmail-tpl-header">
+        <strong>${gmailEscHtml(t.name)}</strong>
+        <div>
+          <button class="gmail-tpl-copy" onclick="copyTemplate(${i},'${activeCat}')" title="Copy">📋</button>
+          ${activeCat === 'custom' ? `<button class="gmail-tpl-del" onclick="deleteTemplate(${i})" title="Delete">🗑️</button>` : ''}
+        </div>
+      </div>
+      <pre class="gmail-tpl-body">${gmailEscHtml(t.body)}</pre>
+    </div>
+  `).join('');
+}
+
+async function copyTemplate(idx, cat) {
+  const tpl = emailTemplates[cat]?.[idx];
+  if (!tpl) return;
+  try {
+    await navigator.clipboard.writeText(tpl.body);
+    showToast('Template copied!', 1200);
+    playSound('success');
+    log(`📝 Copied template: ${tpl.name}`, 'info');
+  } catch {
+    showToast('Copy failed', 1200);
+  }
+}
+
+function addCustomTemplate() {
+  const name = document.getElementById('tplName')?.value.trim();
+  const body = document.getElementById('tplBody')?.value.trim();
+  if (!name || !body) { showToast('Enter name and text', 2000); return; }
+  emailTemplates.custom.push({ name, body });
+  saveCustomTemplates();
+  renderTemplates('custom');
+  document.getElementById('tplName').value = '';
+  document.getElementById('tplBody').value = '';
+  log(`📝 Template saved: ${name}`, 'success');
+  playSound('success');
+}
+
+function deleteTemplate(idx) {
+  emailTemplates.custom.splice(idx, 1);
+  saveCustomTemplates();
+  renderTemplates('custom');
+}
+
+/* ═══════ TIP OF THE DAY ═══════ */
+
+const GMAIL_TIPS = [
+  'Use "is:unread" to find all unread emails instantly.',
+  'Combine operators: "from:boss has:attachment newer_than:7d"',
+  'Use "larger:5m" to find emails larger than 5 MB.',
+  'Search by filename: "filename:invoice.pdf"',
+  'Use "in:anywhere" to search all folders including trash and spam.',
+  'Use "to:me" to find emails sent directly to you (not CC/BCC).',
+  'Search exact phrases with quotes: "project meeting"',
+  'Use "OR" (uppercase) to combine: "from:ahmed OR from:ali"',
+  'Use "-" to exclude: "project -meeting" finds "project" without "meeting"',
+  'Use "label:important" to filter by Gmail labels.',
+  'Use "before:2025/01/01" and "after:2024/06/01" for date ranges.',
+  'Use "has:drive" to find emails with Google Drive links.',
+  'Use "cc:someone" to search the CC field.',
+  'Use "list:info@newsletter.com" to find mailing list emails.',
+  'Use "category:promotions" to filter by Gmail category tabs.',
+  'Use "deliveredto:myemail@gmail.com" for alias-specific searches.',
+  'Keyboard shortcut: press "/" in Gmail to jump to the search bar.',
+  'Use "AROUND 5" between words to find them within 5 words of each other.',
+  'Use "older_than:1y" to find emails older than 1 year.',
+  'Star important emails and find them fast with "is:starred".',
+];
+
+function showRandomTip() {
+  const banner = document.getElementById('tipBanner');
+  const text = document.getElementById('tipText');
+  if (!banner || !text) return;
+  const tip = GMAIL_TIPS[Math.floor(Math.random() * GMAIL_TIPS.length)];
+  text.textContent = tip;
+  banner.style.display = 'flex';
+}
+
+function closeTip() {
+  const banner = document.getElementById('tipBanner');
+  if (banner) banner.style.display = 'none';
+}
+
 /* ═══════ OFFLINE HANDLING ═══════ */
 
 function gmailCheckOnline() {
@@ -1521,6 +1698,9 @@ gmailBuildExamples();
 loadSearchHistory();
 renderHistory();
 renderGmailQuiz();
+loadTemplates();
+renderTemplates();
+showRandomTip();
 gmailRenderAuth();
 if (gmailCheckOnline()) {
   log('📧 Gmail Lab ready — connect your Google account!', 'success');

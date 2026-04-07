@@ -203,6 +203,59 @@
         </div>
       </details>
 
+      <!-- ═══════════════════ DATE RANGE SEARCH ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">📅</span> <span data-i18n="sectionDateRange">Date Range Search</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div class="gmail-date-grid">
+            <div class="gmail-date-field">
+              <label>From</label>
+              <input type="date" id="drFrom" class="gmail-filter-input" />
+            </div>
+            <div class="gmail-date-field">
+              <label>To</label>
+              <input type="date" id="drTo" class="gmail-filter-input" />
+            </div>
+            <div class="gmail-date-field">
+              <label>Sender (optional)</label>
+              <input type="text" id="drSender" class="gmail-filter-input" placeholder="e.g. ahmed" />
+            </div>
+          </div>
+          <div class="gmail-date-presets">
+            <button class="btn-sm" onclick="drPreset('today')">Today</button>
+            <button class="btn-sm" onclick="drPreset('week')">This week</button>
+            <button class="btn-sm" onclick="drPreset('month')">This month</button>
+            <button class="btn-sm" onclick="drPreset('3months')">3 months</button>
+            <button class="btn-sm" onclick="drPreset('year')">This year</button>
+          </div>
+          <button class="btn-sm" onclick="drSearch()" style="background:var(--accent);color:#fff;margin-top:8px;width:100%">🔍 Search Date Range</button>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ EMAIL TEMPLATES ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">📝</span> <span data-i18n="sectionTemplates">Email Templates</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Copy-paste ready responses</p>
+          <div class="gmail-tpl-tabs" id="tplTabs"></div>
+          <div id="tplContainer" class="gmail-tpl-list"></div>
+          <div class="gmail-tpl-custom" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+            <p style="font-size:0.78rem;opacity:0.5;margin-bottom:6px">Add your own template:</p>
+            <input type="text" id="tplName" class="gmail-filter-input" placeholder="Template name" style="margin-bottom:4px;width:100%" />
+            <textarea id="tplBody" class="gmail-filter-input" placeholder="Template text..." rows="3" style="width:100%;resize:vertical"></textarea>
+            <button class="btn-sm" onclick="addCustomTemplate()" style="margin-top:6px">➕ Save Template</button>
+          </div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ TIP OF THE DAY ═══════════════════ -->
+      <div class="gmail-tip-banner" id="tipBanner" style="display:none">
+        <span class="gmail-tip-icon">💡</span>
+        <span class="gmail-tip-text" id="tipText"></span>
+        <button class="gmail-tip-next" onclick="showRandomTip()">↻</button>
+        <button class="gmail-tip-close" onclick="closeTip()">✕</button>
+      </div>
+
       <!-- ═══════════════════ CHEAT SHEET ═══════════════════ -->
       <details class="collapsible">
         <summary><span class="icon">📋</span> <span data-i18n="sectionC">Gmail Search Cheat Sheet</span></summary>

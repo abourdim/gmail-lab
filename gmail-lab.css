@@ -402,6 +402,57 @@
 }
 .gmail-quiz-result.perfect { background: rgba(74,222,128,.15); color: #4ade80; }
 
+/* ═══ DATE RANGE ═══ */
+.gmail-date-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.gmail-date-field { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 4px; }
+.gmail-date-field label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+.gmail-date-presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.gmail-date-presets .btn-sm { font-size: 0.72rem; padding: 4px 10px; }
+
+/* ═══ EMAIL TEMPLATES ═══ */
+.gmail-tpl-tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.gmail-tpl-tab {
+  padding: 5px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-muted); cursor: pointer;
+  font-size: 0.75rem; transition: all .2s;
+}
+.gmail-tpl-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.gmail-tpl-list { display: flex; flex-direction: column; gap: 8px; }
+.gmail-tpl-item {
+  border: 1px solid var(--border); border-radius: 8px;
+  background: rgba(0,0,0,.08); overflow: hidden;
+}
+.light-theme .gmail-tpl-item { background: rgba(0,0,0,.03); }
+.gmail-tpl-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+.gmail-tpl-copy, .gmail-tpl-del {
+  background: transparent; border: none; cursor: pointer; font-size: 0.85rem; padding: 2px;
+}
+.gmail-tpl-body {
+  padding: 10px 12px; font-size: 0.78rem; color: var(--text-muted);
+  white-space: pre-wrap; word-break: break-word; margin: 0;
+  font-family: var(--font-b); line-height: 1.5; max-height: 120px; overflow-y: auto;
+}
+
+/* ═══ TIP BANNER ═══ */
+.gmail-tip-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; margin: 0 4px 8px;
+  border-radius: 10px;
+  background: rgba(212,160,60,.1); border: 1px solid rgba(212,160,60,.2);
+  font-size: 0.82rem; color: var(--text);
+}
+.gmail-tip-icon { font-size: 1.1rem; flex-shrink: 0; }
+.gmail-tip-text { flex: 1; }
+.gmail-tip-next, .gmail-tip-close {
+  background: transparent; border: none; cursor: pointer;
+  font-size: 0.9rem; color: var(--text-muted); padding: 4px;
+}
+.gmail-tip-next:hover, .gmail-tip-close:hover { color: var(--accent); }
+
 /* ═══ MODAL ═══ */
 .gmail-modal-overlay {
   position: fixed; inset: 0; z-index: 10000;
