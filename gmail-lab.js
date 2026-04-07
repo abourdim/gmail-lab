@@ -464,7 +464,7 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
     <div class="gmail-results-header">
       <span class="gmail-results-title">📨 ${gmailEscHtml(title)}</span>
       <span class="gmail-results-stats" id="resultsStats">${statsText}</span>
-      <button class="gmail-save-result-btn" onclick="saveSearch('${')+gmailEscJs(query||'')+'}','${gmailEscHtml(title||'').replace(/'/g,"\\'")}')" title="Save this search">⭐</button>
+      <button class="gmail-save-result-btn" onclick="saveSearch('${gmailEscJs(query||'')}','${gmailEscJs(title||'')}')" title="Save this search">⭐</button>
       <div class="gmail-export-wrap">
         <button class="gmail-export-btn" onclick="toggleExportMenu()">⬇️ Export</button>
         <div class="gmail-export-menu" id="exportMenu" style="display:none">
