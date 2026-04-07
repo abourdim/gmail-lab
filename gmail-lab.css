@@ -479,6 +479,13 @@
 /* ═══ DIGEST ═══ */
 .gmail-digest { margin-top: 8px; }
 
+/* ═══ REGEX HINT ═══ */
+.gmail-regex-hint {
+  font-size: 0.65rem; color: var(--text-muted); opacity: 0.5;
+  cursor: pointer; white-space: nowrap; padding: 4px;
+}
+.gmail-regex-hint:hover { opacity: 1; color: var(--accent); }
+
 /* ═══ COUNT BUTTON ═══ */
 .gmail-count-btn {
   font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;

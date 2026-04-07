@@ -85,6 +85,7 @@
       <div class="card gmail-main-search">
         <div class="gmail-search-row">
           <input class="gmail-search-input" id="customInput" placeholder="Search... e.g. kicklox, didaxis  or  from:mom is:unread" onkeydown="if(event.key==='Enter')runCustomSearch()" disabled />
+          <span class="gmail-regex-hint" onclick="openTools();showToolsTab('data')" title="Open MBOX viewer with regex">Regex → 🧰 Data</span>
           <button class="gmail-search-btn" id="customSend" onclick="runCustomSearch()" disabled>🔍</button>
           <button class="gmail-save-search-btn" onclick="saveCurrentSearch()" title="Save this search">⭐</button>
         </div>
