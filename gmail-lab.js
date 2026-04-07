@@ -86,9 +86,11 @@ function gmailEnableButtons(enabled) {
   const ci = document.getElementById('customInput');
   const cs = document.getElementById('customSend');
   const ec = document.getElementById('extractContactsBtn');
+  const sb = document.getElementById('buildStatsBtn');
   if (ci) ci.disabled = !enabled;
   if (cs) cs.disabled = !enabled;
   if (ec) ec.disabled = !enabled;
+  if (sb) sb.disabled = !enabled;
 }
 
 function gmailEscHtml(s) {
@@ -1231,6 +1233,262 @@ function gmailExportContacts(format) {
   log(`👥 Exported ${extractedContacts.length} contacts as ${format.toUpperCase()}`, 'success');
 }
 
+/* ═══════ EMAIL STATS DASHBOARD ═══════ */
+
+async function gmailBuildStats() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+
+  const btn = document.getElementById('buildStatsBtn');
+  const status = document.getElementById('statsStatus');
+  const dashboard = document.getElementById('statsDashboard');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Scanning…';
+
+  const senderMap = {};
+  const dayMap = {};
+  const hourMap = {};
+  let totalScanned = 0, unreadTotal = 0, starredTotal = 0, attachTotal = 0;
+  let pageToken = null;
+
+  log('📊 Analyzing inbox…', 'info');
+
+  try {
+    do {
+      const listParams = { userId: 'me', maxResults: 250 };
+      if (pageToken) listParams.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(listParams);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+
+      for (const m of msgs) {
+        try {
+          const d = await gapi.client.gmail.users.messages.get({
+            userId: 'me', id: m.id, format: 'metadata',
+            metadataHeaders: ['From', 'Date']
+          });
+          const headers = d.result.payload.headers;
+          const from = (headers.find(h => h.name === 'From') || {}).value || '';
+          const dateStr = (headers.find(h => h.name === 'Date') || {}).value || '';
+          const labels = d.result.labelIds || [];
+
+          // Sender stats
+          const emailMatch = from.match(/<([^>]+)>/);
+          const senderEmail = emailMatch ? emailMatch[1].toLowerCase() : from.toLowerCase().trim();
+          const nameMatch = from.match(/^"?([^"<]+)"?\s*</);
+          const senderName = nameMatch ? nameMatch[1].trim() : senderEmail.split('@')[0];
+          if (senderEmail) {
+            if (!senderMap[senderEmail]) senderMap[senderEmail] = { name: senderName, email: senderEmail, count: 0 };
+            senderMap[senderEmail].count++;
+          }
+
+          // Day & hour stats
+          try {
+            const dt = new Date(dateStr);
+            const dayKey = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+            const hourKey = dt.getHours();
+            dayMap[dayKey] = (dayMap[dayKey] || 0) + 1;
+            hourMap[hourKey] = (hourMap[hourKey] || 0) + 1;
+          } catch {}
+
+          // Labels
+          if (labels.includes('UNREAD')) unreadTotal++;
+          if (labels.includes('STARRED')) starredTotal++;
+          if (labels.includes('ATTACHMENT') || d.result.payload?.parts?.some(p => p.filename)) attachTotal++;
+        } catch {}
+      }
+
+      totalScanned += msgs.length;
+      if (status) status.textContent = `${totalScanned} emails scanned…`;
+      if (totalScanned >= 500) break;
+      await new Promise(r => setTimeout(r, 200));
+    } while (pageToken);
+
+    // Build dashboard
+    const topSenders = Object.values(senderMap).sort((a, b) => b.count - a.count).slice(0, 10);
+    const maxCount = topSenders[0]?.count || 1;
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const maxDay = Math.max(...days.map(d => dayMap[d] || 0), 1);
+    const maxHour = Math.max(...Object.values(hourMap), 1);
+
+    if (dashboard) dashboard.innerHTML = `
+      <div class="stats-overview">
+        <div class="stats-card"><span class="stats-num">${totalScanned}</span><span class="stats-label">Scanned</span></div>
+        <div class="stats-card"><span class="stats-num">${unreadTotal}</span><span class="stats-label">Unread</span></div>
+        <div class="stats-card"><span class="stats-num">${starredTotal}</span><span class="stats-label">Starred</span></div>
+        <div class="stats-card"><span class="stats-num">${Object.keys(senderMap).length}</span><span class="stats-label">Senders</span></div>
+      </div>
+
+      <h4 class="stats-section-title">🏆 Top 10 Senders</h4>
+      <div class="stats-bars">
+        ${topSenders.map(s => `
+          <div class="stats-bar-row">
+            <span class="stats-bar-label" title="${gmailEscHtml(s.email)}">${gmailEscHtml(s.name)}</span>
+            <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${(s.count/maxCount*100).toFixed(0)}%"></div></div>
+            <span class="stats-bar-val">${s.count}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <h4 class="stats-section-title">📅 Emails by Day</h4>
+      <div class="stats-bars">
+        ${days.map(d => `
+          <div class="stats-bar-row">
+            <span class="stats-bar-label">${d}</span>
+            <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${((dayMap[d]||0)/maxDay*100).toFixed(0)}%"></div></div>
+            <span class="stats-bar-val">${dayMap[d]||0}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <h4 class="stats-section-title">⏰ Busiest Hours</h4>
+      <div class="stats-hours">
+        ${Array.from({length:24}, (_,h) => {
+          const v = hourMap[h] || 0;
+          const pct = (v / maxHour * 100).toFixed(0);
+          return `<div class="stats-hour" title="${h}:00 — ${v} emails"><div class="stats-hour-bar" style="height:${pct}%"></div><span>${h}</span></div>`;
+        }).join('')}
+      </div>
+    `;
+
+    log(`📊 Stats: ${totalScanned} emails, ${Object.keys(senderMap).length} senders, top: ${topSenders[0]?.name || 'N/A'}`, 'success');
+    playSound('success');
+  } catch (e) {
+    log('❌ Stats failed: ' + (e.message || ''), 'error');
+  }
+
+  if (btn) btn.disabled = false;
+  if (status) status.textContent = '';
+}
+
+/* ═══════ FILTER BUILDER ═══════ */
+
+function fbBuildQuery() {
+  const parts = [];
+  const from = document.getElementById('fbFrom')?.value.trim();
+  const to = document.getElementById('fbTo')?.value.trim();
+  const subject = document.getElementById('fbSubject')?.value.trim();
+  const words = document.getElementById('fbWords')?.value.trim();
+  const after = document.getElementById('fbAfter')?.value;
+  const before = document.getElementById('fbBefore')?.value;
+  const unread = document.getElementById('fbUnread')?.checked;
+  const starred = document.getElementById('fbStarred')?.checked;
+  const attach = document.getElementById('fbAttach')?.checked;
+
+  if (from) parts.push(`from:${from}`);
+  if (to) parts.push(`to:${to}`);
+  if (subject) parts.push(`subject:${subject}`);
+  if (words) parts.push(words);
+  if (after) parts.push(`after:${after.replace(/-/g, '/')}`);
+  if (before) parts.push(`before:${before.replace(/-/g, '/')}`);
+  if (unread) parts.push('is:unread');
+  if (starred) parts.push('is:starred');
+  if (attach) parts.push('has:attachment');
+
+  return parts.join(' ');
+}
+
+function fbUpdatePreview() {
+  const q = fbBuildQuery();
+  const preview = document.getElementById('fbPreview');
+  if (preview) preview.textContent = q || '(empty — enter at least one filter)';
+}
+
+function fbRun() {
+  const q = fbBuildQuery();
+  if (!q) { showToast('Add at least one filter', 2000); return; }
+  gmailRunSearch(q, 'Filter: ' + q.slice(0, 40));
+  playSound('click');
+}
+
+function fbClear() {
+  ['fbFrom','fbTo','fbSubject','fbWords','fbAfter','fbBefore'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['fbUnread','fbStarred','fbAttach'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+  fbUpdatePreview();
+}
+
+// Auto-update preview on input
+document.addEventListener('DOMContentLoaded', () => {
+  ['fbFrom','fbTo','fbSubject','fbWords','fbAfter','fbBefore'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', fbUpdatePreview);
+  });
+  ['fbUnread','fbStarred','fbAttach'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', fbUpdatePreview);
+  });
+});
+
+/* ═══════ GMAIL SEARCH QUIZ ═══════ */
+
+const GMAIL_QUIZ = [
+  { q: 'How do you find unread emails?', opts: ['is:unread', 'unread:true', 'status:unread', 'filter:unread'], ans: 0 },
+  { q: 'Search for emails from "ahmed"?', opts: ['sender:ahmed', 'by:ahmed', 'from:ahmed', 'origin:ahmed'], ans: 2 },
+  { q: 'Find emails with PDF attachments?', opts: ['has:pdf', 'attachment:pdf', 'filename:pdf', 'file:pdf'], ans: 2 },
+  { q: 'Show emails from the last 7 days?', opts: ['last:7d', 'recent:7d', 'newer_than:7d', 'age:7d'], ans: 2 },
+  { q: 'Search emails by subject line?', opts: ['title:hello', 'heading:hello', 'subject:hello', 'about:hello'], ans: 2 },
+  { q: 'Find starred emails?', opts: ['starred:true', 'is:starred', 'flag:starred', 'mark:star'], ans: 1 },
+  { q: 'Search sent emails only?', opts: ['is:sent', 'folder:sent', 'in:sent', 'box:sent'], ans: 2 },
+  { q: 'Find emails with any attachment?', opts: ['with:file', 'has:attachment', 'includes:file', 'contains:attach'], ans: 1 },
+  { q: 'Emails after January 1, 2025?', opts: ['since:2025/01/01', 'after:2025/01/01', 'from_date:2025/01/01', 'date>2025/01/01'], ans: 1 },
+  { q: 'Combine: unread from mom with attachment?', opts: ['from:mom + is:unread + has:attachment', 'from:mom is:unread has:attachment', 'from:mom AND unread AND attachment', 'from:mom,is:unread,has:attachment'], ans: 1 },
+];
+
+let gmQuizAnswers = {};
+let gmQuizScore = 0;
+
+function renderGmailQuiz() {
+  const container = document.getElementById('gmailQuizContainer');
+  const result = document.getElementById('gmailQuizResult');
+  if (!container) return;
+  if (result) result.style.display = 'none';
+  gmQuizAnswers = {}; gmQuizScore = 0;
+
+  container.innerHTML = GMAIL_QUIZ.map((q, qi) => `
+    <div class="gmail-quiz-q" id="gq-${qi}">
+      <p class="gmail-quiz-question"><strong>${qi + 1}.</strong> ${q.q}</p>
+      <div class="gmail-quiz-opts">
+        ${q.opts.map((o, oi) => `<button class="gmail-quiz-opt" onclick="answerGmailQuiz(${qi},${oi})"><code>${o}</code></button>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function answerGmailQuiz(qi, oi) {
+  if (gmQuizAnswers[qi] !== undefined) return;
+  gmQuizAnswers[qi] = oi;
+  const correct = GMAIL_QUIZ[qi].ans === oi;
+  if (correct) gmQuizScore++;
+
+  const qEl = document.getElementById(`gq-${qi}`);
+  if (qEl) qEl.querySelectorAll('.gmail-quiz-opt').forEach((b, i) => {
+    b.disabled = true;
+    if (i === GMAIL_QUIZ[qi].ans) b.classList.add('correct');
+    if (i === oi && !correct) b.classList.add('wrong');
+  });
+
+  if (Object.keys(gmQuizAnswers).length === GMAIL_QUIZ.length) {
+    const r = document.getElementById('gmailQuizResult');
+    if (r) {
+      r.style.display = 'block';
+      const pct = Math.round((gmQuizScore / GMAIL_QUIZ.length) * 100);
+      const msg = pct === 100 ? '🏆 Perfect! You are a Gmail Master!' : pct >= 70 ? '🎉 Great job!' : pct >= 50 ? '👍 Not bad!' : '📚 Keep learning!';
+      r.textContent = `${msg} Score: ${gmQuizScore}/${GMAIL_QUIZ.length} (${pct}%)`;
+      r.className = 'gmail-quiz-result' + (pct === 100 ? ' perfect' : '');
+    }
+    playSound(gmQuizScore === GMAIL_QUIZ.length ? 'success' : 'click');
+    log(`🧠 Quiz: ${gmQuizScore}/${GMAIL_QUIZ.length}`, gmQuizScore === GMAIL_QUIZ.length ? 'success' : 'info');
+  }
+}
+
+function resetGmailQuiz() { gmQuizAnswers = {}; gmQuizScore = 0; renderGmailQuiz(); }
+
 /* ═══════ OFFLINE HANDLING ═══════ */
 
 function gmailCheckOnline() {
@@ -1262,6 +1520,7 @@ window.addEventListener('offline', () => {
 gmailBuildExamples();
 loadSearchHistory();
 renderHistory();
+renderGmailQuiz();
 gmailRenderAuth();
 if (gmailCheckOnline()) {
   log('📧 Gmail Lab ready — connect your Google account!', 'success');

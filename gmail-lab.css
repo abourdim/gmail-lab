@@ -330,6 +330,78 @@
 }
 .gmail-contact-search:hover { transform: scale(1.2); }
 
+/* ═══ STATS DASHBOARD ═══ */
+.gmail-stats-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.gmail-stats-status { font-size: 0.78rem; color: var(--text-muted); }
+.gmail-stats-dashboard { }
+.stats-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.stats-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 12px 8px; border-radius: 10px;
+  background: rgba(0,0,0,.12); border: 1px solid var(--border);
+}
+.light-theme .stats-card { background: rgba(0,0,0,.03); }
+.stats-num { font-size: 1.3rem; font-weight: 700; color: var(--accent); font-family: var(--font-h); }
+.stats-label { font-size: 0.7rem; color: var(--text-muted); }
+.stats-section-title { font-size: 0.85rem; margin: 14px 0 8px; color: var(--accent); }
+.stats-bars { display: flex; flex-direction: column; gap: 5px; }
+.stats-bar-row { display: flex; align-items: center; gap: 8px; }
+.stats-bar-label { width: 100px; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted); }
+.stats-bar-track { flex: 1; height: 14px; border-radius: 7px; background: rgba(0,0,0,.15); overflow: hidden; }
+.light-theme .stats-bar-track { background: rgba(0,0,0,.06); }
+.stats-bar-fill { height: 100%; border-radius: 7px; background: var(--accent); transition: width .4s ease; }
+.stats-bar-val { width: 30px; font-size: 0.72rem; text-align: right; color: var(--text-muted); }
+.stats-hours { display: flex; gap: 2px; align-items: flex-end; height: 60px; margin-top: 4px; }
+.stats-hour { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+.stats-hour-bar { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--accent); transition: height .4s ease; }
+.stats-hour span { font-size: 0.55rem; color: var(--text-muted); margin-top: 2px; }
+@media (max-width: 600px) {
+  .stats-overview { grid-template-columns: repeat(2, 1fr); }
+  .stats-bar-label { width: 70px; }
+}
+
+/* ═══ FILTER BUILDER ═══ */
+.gmail-filter-grid { display: grid; grid-template-columns: 80px 1fr; gap: 6px 10px; align-items: center; }
+.gmail-filter-grid label { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+.gmail-filter-input {
+  padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border);
+  background: rgba(0,0,0,.15); color: var(--text); font-size: 0.82rem; outline: none;
+  font-family: var(--font-b);
+}
+.gmail-filter-input:focus { border-color: var(--accent); }
+.light-theme .gmail-filter-input { background: rgba(0,0,0,.04); }
+.gmail-filter-checks { display: flex; gap: 12px; font-size: 0.8rem; }
+.gmail-filter-checks label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-weight: 400; }
+.gmail-filter-preview {
+  margin: 10px 0; padding: 8px 12px; border-radius: 6px;
+  background: rgba(0,0,0,.2); border: 1px solid var(--border);
+  font-size: 0.82rem; min-height: 32px;
+}
+.gmail-filter-preview code { color: var(--accent); word-break: break-all; }
+.gmail-filter-actions { display: flex; gap: 6px; }
+
+/* ═══ GMAIL QUIZ ═══ */
+.gmail-quiz-q { margin-bottom: 14px; }
+.gmail-quiz-question { font-size: 0.85rem; margin-bottom: 6px; }
+.gmail-quiz-opts { display: flex; flex-direction: column; gap: 4px; }
+.gmail-quiz-opt {
+  width: 100%; text-align: start; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: rgba(0,0,0,.08);
+  color: var(--text); cursor: pointer; font-size: 0.82rem; transition: all .2s;
+}
+.gmail-quiz-opt:hover:not(:disabled) { background: rgba(0,0,0,.18); }
+.gmail-quiz-opt:disabled { cursor: default; opacity: .7; }
+.gmail-quiz-opt.correct { background: rgba(74,222,128,.2); border-color: #4ade80; color: #4ade80; }
+.gmail-quiz-opt.wrong { background: rgba(239,68,68,.2); border-color: #ef4444; color: #ef4444; }
+.gmail-quiz-opt code { color: var(--accent); }
+.gmail-quiz-opt.correct code, .gmail-quiz-opt.wrong code { color: inherit; }
+.light-theme .gmail-quiz-opt { background: rgba(0,0,0,.03); }
+.gmail-quiz-result {
+  padding: 12px; border-radius: 10px; text-align: center;
+  background: rgba(0,0,0,.12); font-size: 0.95rem; color: var(--text); margin-top: 8px;
+}
+.gmail-quiz-result.perfect { background: rgba(74,222,128,.15); color: #4ade80; }
+
 /* ═══ MODAL ═══ */
 .gmail-modal-overlay {
   position: fixed; inset: 0; z-index: 10000;

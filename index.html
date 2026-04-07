@@ -136,6 +136,59 @@
         </div>
       </details>
 
+      <!-- ═══════════════════ EMAIL STATS ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">📊</span> <span data-i18n="sectionStats">Email Stats Dashboard</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div class="gmail-stats-bar">
+            <button class="btn-sm" onclick="gmailBuildStats()" id="buildStatsBtn" disabled>📊 Analyze Inbox</button>
+            <span class="gmail-stats-status" id="statsStatus"></span>
+          </div>
+          <div id="statsDashboard" class="gmail-stats-dashboard"></div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ FILTER BUILDER ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">🔧</span> <span data-i18n="sectionFilter">Filter Builder</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Build a Gmail search query visually</p>
+          <div class="gmail-filter-grid">
+            <label>From</label><input type="text" id="fbFrom" class="gmail-filter-input" placeholder="sender name or email" />
+            <label>To</label><input type="text" id="fbTo" class="gmail-filter-input" placeholder="recipient" />
+            <label>Subject</label><input type="text" id="fbSubject" class="gmail-filter-input" placeholder="keyword" />
+            <label>Has words</label><input type="text" id="fbWords" class="gmail-filter-input" placeholder="any words in body" />
+            <label>After</label><input type="date" id="fbAfter" class="gmail-filter-input" />
+            <label>Before</label><input type="date" id="fbBefore" class="gmail-filter-input" />
+            <label>Options</label>
+            <div class="gmail-filter-checks">
+              <label><input type="checkbox" id="fbUnread" /> Unread</label>
+              <label><input type="checkbox" id="fbStarred" /> Starred</label>
+              <label><input type="checkbox" id="fbAttach" /> Attachments</label>
+            </div>
+          </div>
+          <div class="gmail-filter-preview">
+            <code id="fbPreview"></code>
+          </div>
+          <div class="gmail-filter-actions">
+            <button class="btn-sm" onclick="fbUpdatePreview()">🔄 Preview</button>
+            <button class="btn-sm" onclick="fbRun()" style="background:var(--accent);color:#fff">🔍 Search</button>
+            <button class="btn-sm" onclick="fbClear()">🧹 Clear</button>
+          </div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ GMAIL QUIZ ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">🧠</span> <span data-i18n="sectionQuiz">Gmail Search Quiz</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Test your Gmail search skills!</p>
+          <div id="gmailQuizContainer"></div>
+          <div id="gmailQuizResult" class="gmail-quiz-result" style="display:none"></div>
+          <button class="btn-sm" onclick="resetGmailQuiz()" style="margin-top:8px">🔄 Try Again</button>
+        </div>
+      </details>
+
       <!-- ═══════════════════ HOW IT WORKS ═══════════════════ -->
       <details class="collapsible">
         <summary><span class="icon">🧠</span> <span data-i18n="sectionB">How It Works</span></summary>
