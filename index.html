@@ -229,6 +229,33 @@
           <button class="btn-sm" onclick="gmailCalcInboxScore()" id="scoreBtn" disabled>🏆 Calculate</button>
         </div>
         <div id="scoreContainer"></div>
+
+        <h4 class="tools-section">📈 Email Timeline</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailBuildTimeline()" id="timelineBtn" disabled>📈 Generate</button>
+          <span id="timelineStatus" class="gmail-stats-status"></span>
+        </div>
+        <div id="timelineContainer" class="gmail-timeline"></div>
+
+        <h4 class="tools-section">🕸️ Sender Network</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailBuildNetwork()" id="networkBtn" disabled>🕸️ Generate</button>
+        </div>
+        <div id="networkContainer"></div>
+
+        <h4 class="tools-section">🔄 Duplicate Finder</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailFindDuplicates()" id="dupeBtn" disabled>🔄 Scan</button>
+          <span id="dupeStatus" class="gmail-stats-status"></span>
+        </div>
+        <div id="dupeContainer"></div>
+
+        <h4 class="tools-section">🏷️ Auto-Categorizer</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailAutoCategorize()" id="catBtn" disabled>🏷️ Categorize</button>
+          <span id="catStatus" class="gmail-stats-status"></span>
+        </div>
+        <div id="catContainer"></div>
       </div>
 
       <!-- 💾 DATA TAB -->
@@ -278,6 +305,23 @@
           <button class="btn-sm" onclick="bulkCopy('all')">All</button>
         </div>
         <p id="bulkInfo" style="font-size:0.72rem;opacity:0.4;margin-top:4px"></p>
+
+        <h4 class="tools-section">🔗 Share Search</h4>
+        <div class="gmail-stats-bar">
+          <input type="text" id="shareSearchInput" class="gmail-filter-input" placeholder="Enter a search query" style="flex:1" />
+          <button class="btn-sm" onclick="generateShareLink()">🔗 Link</button>
+          <button class="btn-sm" onclick="generateQRCode()">📱 QR</button>
+        </div>
+        <div id="shareResult" style="margin-top:6px"></div>
+
+        <h4 class="tools-section">📄 Diff Viewer</h4>
+        <p style="font-size:0.75rem;opacity:0.5;margin-bottom:6px">Compare two emails side by side</p>
+        <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:4px">
+          <input type="text" id="diffId1" class="gmail-filter-input" placeholder="Email ID 1 (from log)" style="flex:1;min-width:100px" />
+          <input type="text" id="diffId2" class="gmail-filter-input" placeholder="Email ID 2" style="flex:1;min-width:100px" />
+          <button class="btn-sm" onclick="gmailDiffEmails()">⚖️ Compare</button>
+        </div>
+        <div id="diffContainer"></div>
       </div>
 
       <!-- 📚 LEARN TAB -->

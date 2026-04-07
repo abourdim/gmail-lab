@@ -91,7 +91,7 @@ function gmailEnableButtons(enabled) {
   if (cs) cs.disabled = !enabled;
   if (ec) ec.disabled = !enabled;
   if (sb) sb.disabled = !enabled;
-  ['scanAttachBtn','exportAttachBtn','wordCloudBtn','digestDayBtn','digestWeekBtn','digestMonthBtn','sizeBtn','scoreBtn','exportAllCsvBtn','exportAllJsonBtn','exportAllTxtBtn'].forEach(id => {
+  ['scanAttachBtn','exportAttachBtn','wordCloudBtn','digestDayBtn','digestWeekBtn','digestMonthBtn','sizeBtn','scoreBtn','exportAllCsvBtn','exportAllJsonBtn','exportAllTxtBtn','timelineBtn','networkBtn','dupeBtn','catBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !enabled;
   });
@@ -2262,6 +2262,504 @@ async function gmailExportAllInbox(format) {
   if (fillEl) fillEl.style.width = '0%';
 }
 
+/* ═══════ EMAIL SUMMARIZER + SMART REPLY ═══════ */
+
+function summarizeText(text, maxSentences) {
+  maxSentences = maxSentences || 2;
+  if (!text) return '(no content)';
+  const sentences = text.replace(/\n+/g, '. ').split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 15);
+  if (!sentences.length) return text.slice(0, 200);
+  // Score sentences by position + length
+  const scored = sentences.map((s, i) => ({ s, score: (1 / (i + 1)) + (s.length > 50 ? 0.5 : 0) }));
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, maxSentences).map(x => x.s).join('. ') + '.';
+}
+
+function generateSmartReplies(subject, from) {
+  const name = (from || '').replace(/<.*>/, '').replace(/"/g, '').trim().split(' ')[0] || 'there';
+  const subj = (subject || '').toLowerCase();
+  const replies = [];
+
+  if (subj.includes('meeting') || subj.includes('réunion') || subj.includes('اجتماع')) {
+    replies.push(`Thank you ${name}, I'll be there.`, `Sorry ${name}, I have a conflict. Can we reschedule?`, `Noted, JazakAllahu khairan.`);
+  } else if (subj.includes('invoice') || subj.includes('facture') || subj.includes('payment') || subj.includes('paiement')) {
+    replies.push(`Received, thank you.`, `Could you please resend the invoice? I didn't receive the attachment.`, `Payment confirmed, JazakAllahu khairan.`);
+  } else if (subj.includes('question') || subj.includes('help') || subj.includes('aide')) {
+    replies.push(`Hi ${name}, thanks for reaching out. I'll look into this.`, `Good question! Let me get back to you shortly.`, `JazakAllahu khairan for asking. Here's what I think...`);
+  } else {
+    replies.push(`Thank you ${name}, noted.`, `JazakAllahu khairan, I'll get back to you soon.`, `Hi ${name}, thanks for the update!`);
+  }
+  return replies;
+}
+
+// Inject summarize + reply buttons into email full view
+const _origShowFull = gmailShowEmailFull;
+gmailShowEmailFull = function(email) {
+  _origShowFull(email);
+  const container = document.getElementById('resultsContainer');
+  const body = container?.querySelector('.gmail-results-body');
+  if (!body) return;
+
+  const summary = summarizeText(email.body);
+  const replies = generateSmartReplies(email.subject, email.from);
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'gmail-email-toolbar';
+  toolbar.innerHTML = `
+    <div class="gmail-email-actions">
+      <button class="btn-sm" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">📝 Summary</button>
+      <div class="gmail-summary-box" style="display:none"><p>${gmailEscHtml(summary)}</p></div>
+    </div>
+    <div class="gmail-email-actions">
+      <button class="btn-sm" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">💬 Smart Replies</button>
+      <div class="gmail-replies-box" style="display:none">
+        ${replies.map(r => `<button class="gmail-reply-btn" onclick="navigator.clipboard.writeText('${r.replace(/'/g,"\\'")}');showToast('Copied!',1000);playSound('success')">${gmailEscHtml(r)}</button>`).join('')}
+      </div>
+    </div>
+    <button class="btn-sm" onclick="printEmail()">🖨️ PDF</button>
+  `;
+  body.insertBefore(toolbar, body.querySelector('.gmail-email-body'));
+
+  // Store for PDF
+  window._lastEmail = email;
+};
+
+/* ═══════ EMAIL TO PDF ═══════ */
+
+function printEmail() {
+  const email = window._lastEmail;
+  if (!email) return;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${gmailEscHtml(email.subject)}</title>
+    <style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#333}
+    h1{font-size:1.3rem;border-bottom:2px solid #333;padding-bottom:8px}
+    .meta{color:#666;font-size:0.85rem;margin:4px 0}.body{margin-top:20px;white-space:pre-wrap;line-height:1.6}
+    @media print{body{margin:20px}}</style></head><body>
+    <h1>${gmailEscHtml(email.subject || '(no subject)')}</h1>
+    <div class="meta"><b>From:</b> ${gmailEscHtml(email.from)}</div>
+    <div class="meta"><b>To:</b> ${gmailEscHtml(email.to)}</div>
+    <div class="meta"><b>Date:</b> ${gmailEscHtml(email.date)}</div>
+    <div class="body">${gmailEscHtml(email.body || '')}</div>
+    </body></html>`);
+  win.document.close();
+  setTimeout(() => { win.print(); }, 500);
+}
+
+/* ═══════ EMAIL TIMELINE ═══════ */
+
+async function gmailBuildTimeline() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const btn = document.getElementById('timelineBtn');
+  const status = document.getElementById('timelineStatus');
+  const container = document.getElementById('timelineContainer');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Scanning…';
+
+  const monthMap = {};
+  let pageToken = null, total = 0;
+
+  try {
+    do {
+      const p = { userId: 'me', maxResults: 250 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+
+      // Batch fetch dates
+      const boundary = 'batch_tl_' + Date.now();
+      let batchBody = '';
+      msgs.forEach((m, i) => {
+        batchBody += `--${boundary}\r\nContent-Type: application/http\r\nContent-ID: <t${i}>\r\n\r\nGET /gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Date\r\n\r\n`;
+      });
+      batchBody += `--${boundary}--`;
+
+      const resp = await fetch('https://www.googleapis.com/batch/gmail/v1', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + gmailAccessToken, 'Content-Type': 'multipart/mixed; boundary=' + boundary },
+        body: batchBody
+      });
+      const text = await resp.text();
+      const rb = text.match(/^--([^\r\n]+)/)?.[1];
+      if (rb) {
+        text.split('--' + rb).slice(1, -1).forEach(part => {
+          try {
+            const json = JSON.parse(part.match(/\{[\s\S]*\}/)?.[0]);
+            const dateStr = (json.payload?.headers?.find(h => h.name === 'Date') || {}).value;
+            if (dateStr) {
+              const d = new Date(dateStr);
+              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+              monthMap[key] = (monthMap[key] || 0) + 1;
+            }
+          } catch {}
+        });
+      }
+
+      total += msgs.length;
+      if (status) status.textContent = `${total} emails…`;
+      if (total >= 1000) break;
+      await new Promise(r => setTimeout(r, 300));
+    } while (pageToken);
+
+    const months = Object.entries(monthMap).sort((a, b) => a[0].localeCompare(b[0]));
+    const maxVal = Math.max(...months.map(m => m[1]), 1);
+
+    if (container) {
+      container.innerHTML = `<div class="timeline-chart">${months.map(([m, c]) => {
+        const pct = (c / maxVal * 100).toFixed(0);
+        const label = m.split('-');
+        return `<div class="timeline-bar-wrap" onclick="gmailRunSearch('after:${label[0]}/${label[1]}/01 before:${label[0]}/${String(Number(label[1])+1).padStart(2,'0')}/01','${m}')" title="${m}: ${c} emails">
+          <div class="timeline-bar" style="height:${pct}%"></div>
+          <span class="timeline-label">${label[1]}/${label[0].slice(2)}</span>
+        </div>`;
+      }).join('')}</div>`;
+    }
+    log(`📈 Timeline: ${months.length} months, ${total} emails`, 'success');
+    playSound('success');
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
+  if (btn) btn.disabled = false;
+  if (status) status.textContent = '';
+}
+
+/* ═══════ SENDER NETWORK GRAPH ═══════ */
+
+async function gmailBuildNetwork() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const btn = document.getElementById('networkBtn');
+  const container = document.getElementById('networkContainer');
+  if (btn) btn.disabled = true;
+
+  const senderMap = {};
+  let pageToken = null, total = 0;
+
+  try {
+    do {
+      const p = { userId: 'me', maxResults: 200 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+
+      const boundary = 'batch_net_' + Date.now();
+      let batchBody = '';
+      msgs.forEach((m, i) => {
+        batchBody += `--${boundary}\r\nContent-Type: application/http\r\nContent-ID: <n${i}>\r\n\r\nGET /gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From\r\n\r\n`;
+      });
+      batchBody += `--${boundary}--`;
+
+      const resp = await fetch('https://www.googleapis.com/batch/gmail/v1', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + gmailAccessToken, 'Content-Type': 'multipart/mixed; boundary=' + boundary },
+        body: batchBody
+      });
+      const text = await resp.text();
+      const rb = text.match(/^--([^\r\n]+)/)?.[1];
+      if (rb) {
+        text.split('--' + rb).slice(1, -1).forEach(part => {
+          try {
+            const json = JSON.parse(part.match(/\{[\s\S]*\}/)?.[0]);
+            const from = (json.payload?.headers?.find(h => h.name === 'From') || {}).value || '';
+            const emailMatch = from.match(/<([^>]+)>/);
+            const email = emailMatch ? emailMatch[1].toLowerCase() : from.toLowerCase().trim();
+            const nameMatch = from.match(/^"?([^"<]+)"?\s*</);
+            const name = nameMatch ? nameMatch[1].trim() : email.split('@')[0];
+            if (email && email.includes('@')) {
+              if (!senderMap[email]) senderMap[email] = { name, count: 0 };
+              senderMap[email].count++;
+            }
+          } catch {}
+        });
+      }
+
+      total += msgs.length;
+      if (total >= 500) break;
+      await new Promise(r => setTimeout(r, 300));
+    } while (pageToken);
+
+    const senders = Object.entries(senderMap).sort((a, b) => b[1].count - a[1].count).slice(0, 20);
+    const maxC = senders[0]?.[1].count || 1;
+    const cx = 200, cy = 200, r = 150;
+
+    if (container) {
+      let svg = `<svg viewBox="0 0 400 400" style="width:100%;max-height:400px">`;
+      svg += `<circle cx="${cx}" cy="${cy}" r="24" fill="var(--accent)" opacity="0.3"/>`;
+      svg += `<text x="${cx}" y="${cy+4}" text-anchor="middle" fill="var(--text)" font-size="10" font-weight="700">YOU</text>`;
+
+      senders.forEach(([email, data], i) => {
+        const angle = (i / senders.length) * Math.PI * 2 - Math.PI / 2;
+        const dist = r - (data.count / maxC) * 40;
+        const x = cx + Math.cos(angle) * dist;
+        const y = cy + Math.sin(angle) * dist;
+        const size = 8 + (data.count / maxC) * 16;
+        const opacity = 0.3 + (data.count / maxC) * 0.7;
+        const lineW = 1 + (data.count / maxC) * 3;
+
+        svg += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--accent)" stroke-width="${lineW}" opacity="${opacity * 0.4}"/>`;
+        svg += `<circle cx="${x}" cy="${y}" r="${size}" fill="var(--accent)" opacity="${opacity}" onclick="gmailRunSearch('from:${email}','From: ${data.name}')" style="cursor:pointer"><title>${data.name} (${data.count})</title></circle>`;
+        svg += `<text x="${x}" y="${y + size + 12}" text-anchor="middle" fill="var(--text-muted)" font-size="7">${data.name.slice(0, 12)}</text>`;
+      });
+
+      svg += `</svg>`;
+      container.innerHTML = svg;
+    }
+    log(`🕸️ Network: ${senders.length} top senders from ${total} emails`, 'success');
+    playSound('success');
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
+  if (btn) btn.disabled = false;
+}
+
+/* ═══════ DUPLICATE FINDER ═══════ */
+
+async function gmailFindDuplicates() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const btn = document.getElementById('dupeBtn');
+  const status = document.getElementById('dupeStatus');
+  const container = document.getElementById('dupeContainer');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Scanning…';
+
+  const subjectMap = {};
+  let pageToken = null, total = 0;
+
+  try {
+    do {
+      const p = { userId: 'me', maxResults: 200 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+
+      const boundary = 'batch_dup_' + Date.now();
+      let batchBody = '';
+      msgs.forEach((m, i) => {
+        batchBody += `--${boundary}\r\nContent-Type: application/http\r\nContent-ID: <d${i}>\r\n\r\nGET /gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date\r\n\r\n`;
+      });
+      batchBody += `--${boundary}--`;
+
+      const resp = await fetch('https://www.googleapis.com/batch/gmail/v1', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + gmailAccessToken, 'Content-Type': 'multipart/mixed; boundary=' + boundary },
+        body: batchBody
+      });
+      const text = await resp.text();
+      const rb = text.match(/^--([^\r\n]+)/)?.[1];
+      if (rb) {
+        text.split('--' + rb).slice(1, -1).forEach(part => {
+          try {
+            const json = JSON.parse(part.match(/\{[\s\S]*\}/)?.[0]);
+            const h = json.payload?.headers || [];
+            const subj = (h.find(x => x.name === 'Subject') || {}).value || '';
+            const from = (h.find(x => x.name === 'From') || {}).value || '';
+            const key = subj.toLowerCase().replace(/^(re|fwd|fw):\s*/gi, '').trim();
+            if (key.length > 3) {
+              if (!subjectMap[key]) subjectMap[key] = [];
+              subjectMap[key].push({ id: json.id, subject: subj, from: from.replace(/<.*>/, '').trim(), date: (h.find(x => x.name === 'Date') || {}).value });
+            }
+          } catch {}
+        });
+      }
+
+      total += msgs.length;
+      if (status) status.textContent = `${total} emails…`;
+      if (total >= 500) break;
+      await new Promise(r => setTimeout(r, 300));
+    } while (pageToken);
+
+    const dupes = Object.entries(subjectMap).filter(([, v]) => v.length > 2).sort((a, b) => b[1].length - a[1].length).slice(0, 20);
+
+    if (container) {
+      if (!dupes.length) {
+        container.innerHTML = '<p style="text-align:center;opacity:0.5;padding:12px">No duplicates found</p>';
+      } else {
+        container.innerHTML = dupes.map(([subj, emails]) => `
+          <div class="gmail-dupe-group">
+            <div class="gmail-dupe-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+              <span class="gmail-dupe-count">${emails.length}x</span>
+              <span class="gmail-dupe-subject">${gmailEscHtml(emails[0].subject || subj)}</span>
+            </div>
+            <div class="gmail-dupe-list" style="display:none">
+              ${emails.map(e => `<div class="gmail-dupe-item" onclick="gmailHandleRead('${e.id}')"><span>${gmailEscHtml(e.from)}</span><span class="att-time">${gmailFormatDate(e.date)}</span></div>`).join('')}
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+    log(`🔄 Duplicates: ${dupes.length} groups found in ${total} emails`, 'success');
+    playSound('success');
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
+  if (btn) btn.disabled = false;
+  if (status) status.textContent = '';
+}
+
+/* ═══════ AUTO-CATEGORIZER ═══════ */
+
+async function gmailAutoCategorize() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const btn = document.getElementById('catBtn');
+  const status = document.getElementById('catStatus');
+  const container = document.getElementById('catContainer');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Analyzing…';
+
+  const categories = {
+    'Invoices & Payments': { keywords: ['invoice','facture','payment','paiement','receipt','reçu','billing','montant','total','€','$'], emails: [] },
+    'Newsletters': { keywords: ['unsubscribe','désabonner','newsletter','mailing','digest','weekly','update'], emails: [] },
+    'Social & Notifications': { keywords: ['notification','alert','liked','commented','shared','followed','invitation','invited'], emails: [] },
+    'Meetings & Calendar': { keywords: ['meeting','réunion','calendar','agenda','schedule','invitation','join','zoom','meet','teams'], emails: [] },
+    'Job & Career': { keywords: ['job','emploi','career','position','candidature','resume','cv','interview','entretien','hiring'], emails: [] },
+    'Shopping & Orders': { keywords: ['order','commande','shipping','livraison','tracking','delivery','purchase','achat','cart','panier'], emails: [] },
+  };
+
+  let pageToken = null, total = 0;
+
+  try {
+    do {
+      const p = { userId: 'me', maxResults: 200 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+
+      const boundary = 'batch_cat_' + Date.now();
+      let batchBody = '';
+      msgs.forEach((m, i) => {
+        batchBody += `--${boundary}\r\nContent-Type: application/http\r\nContent-ID: <c${i}>\r\n\r\nGET /gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject\r\n\r\n`;
+      });
+      batchBody += `--${boundary}--`;
+
+      const resp = await fetch('https://www.googleapis.com/batch/gmail/v1', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + gmailAccessToken, 'Content-Type': 'multipart/mixed; boundary=' + boundary },
+        body: batchBody
+      });
+      const text = await resp.text();
+      const rb = text.match(/^--([^\r\n]+)/)?.[1];
+      if (rb) {
+        text.split('--' + rb).slice(1, -1).forEach(part => {
+          try {
+            const json = JSON.parse(part.match(/\{[\s\S]*\}/)?.[0]);
+            const h = json.payload?.headers || [];
+            const subj = ((h.find(x => x.name === 'Subject') || {}).value || '').toLowerCase();
+            const from = ((h.find(x => x.name === 'From') || {}).value || '').toLowerCase();
+            const snippet = (json.snippet || '').toLowerCase();
+            const combined = subj + ' ' + from + ' ' + snippet;
+
+            for (const [cat, data] of Object.entries(categories)) {
+              if (data.keywords.some(kw => combined.includes(kw))) {
+                data.emails.push({ subject: (h.find(x => x.name === 'Subject') || {}).value, from: (h.find(x => x.name === 'From') || {}).value });
+                break;
+              }
+            }
+          } catch {}
+        });
+      }
+
+      total += msgs.length;
+      if (status) status.textContent = `${total} emails…`;
+      if (total >= 500) break;
+      await new Promise(r => setTimeout(r, 300));
+    } while (pageToken);
+
+    const results = Object.entries(categories).filter(([, d]) => d.emails.length > 0).sort((a, b) => b[1].emails.length - a[1].emails.length);
+
+    if (container) {
+      container.innerHTML = results.map(([cat, data]) => `
+        <div class="gmail-cat-group">
+          <div class="gmail-dupe-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+            <span class="gmail-dupe-count">${data.emails.length}</span>
+            <span>${cat}</span>
+          </div>
+          <div class="gmail-dupe-list" style="display:none">
+            ${data.emails.slice(0, 10).map(e => `<div class="gmail-dupe-item"><span>${gmailEscHtml((e.from || '').replace(/<.*>/, '').trim())}</span><span class="att-time">${gmailEscHtml(e.subject || '')}</span></div>`).join('')}
+            ${data.emails.length > 10 ? `<p style="opacity:0.5;font-size:0.75rem;padding:4px">...and ${data.emails.length - 10} more</p>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    log(`🏷️ Categorized ${total} emails into ${results.length} groups`, 'success');
+    playSound('success');
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
+  if (btn) btn.disabled = false;
+  if (status) status.textContent = '';
+}
+
+/* ═══════ SHARE SEARCH + QR CODE ═══════ */
+
+function generateShareLink() {
+  const input = document.getElementById('shareSearchInput');
+  const result = document.getElementById('shareResult');
+  const query = (input?.value || gmailLastQuery || '').trim();
+  if (!query) { showToast('Enter a search query', 1500); return; }
+  const url = `${location.origin}${location.pathname}?q=${encodeURIComponent(query)}`;
+  if (result) {
+    result.innerHTML = `<input class="gmail-filter-input" value="${url}" style="width:100%" onclick="this.select()" readonly />`;
+  }
+  navigator.clipboard.writeText(url).then(() => showToast('Link copied!', 1200));
+  playSound('success');
+}
+
+function generateQRCode() {
+  const input = document.getElementById('shareSearchInput');
+  const result = document.getElementById('shareResult');
+  const query = (input?.value || gmailLastQuery || '').trim();
+  if (!query) { showToast('Enter a search query', 1500); return; }
+  const url = `${location.origin}${location.pathname}?q=${encodeURIComponent(query)}`;
+  // Use Google Charts API for QR
+  const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(url)}`;
+  if (result) {
+    result.innerHTML = `<div style="text-align:center"><img src="${qrUrl}" alt="QR Code" style="border-radius:8px;margin:8px 0" /><p style="font-size:0.72rem;opacity:0.5">Scan to open this search</p></div>`;
+  }
+  playSound('success');
+}
+
+// Auto-run search from URL query param
+function checkUrlQuery() {
+  const params = new URLSearchParams(location.search);
+  const q = params.get('q');
+  if (q && gmailAccessToken) {
+    setTimeout(() => gmailRunSearch(q, q.slice(0, 40)), 1000);
+  }
+}
+
+/* ═══════ DIFF VIEWER ═══════ */
+
+async function gmailDiffEmails() {
+  const id1 = document.getElementById('diffId1')?.value.trim();
+  const id2 = document.getElementById('diffId2')?.value.trim();
+  const container = document.getElementById('diffContainer');
+  if (!id1 || !id2) { showToast('Enter two email IDs', 2000); return; }
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+
+  try {
+    const [e1, e2] = await Promise.all([gmailReadMessage(id1), gmailReadMessage(id2)]);
+    if (container) {
+      container.innerHTML = `
+        <div class="gmail-diff">
+          <div class="gmail-diff-col">
+            <h4>Email 1</h4>
+            <div class="gmail-diff-meta"><b>From:</b> ${gmailEscHtml(e1.from)}</div>
+            <div class="gmail-diff-meta"><b>Subject:</b> ${gmailEscHtml(e1.subject)}</div>
+            <div class="gmail-diff-meta"><b>Date:</b> ${gmailFormatDate(e1.date)}</div>
+            <pre class="gmail-diff-body">${gmailEscHtml(e1.body || '(empty)')}</pre>
+          </div>
+          <div class="gmail-diff-col">
+            <h4>Email 2</h4>
+            <div class="gmail-diff-meta"><b>From:</b> ${gmailEscHtml(e2.from)}</div>
+            <div class="gmail-diff-meta"><b>Subject:</b> ${gmailEscHtml(e2.subject)}</div>
+            <div class="gmail-diff-meta"><b>Date:</b> ${gmailFormatDate(e2.date)}</div>
+            <pre class="gmail-diff-body">${gmailEscHtml(e2.body || '(empty)')}</pre>
+          </div>
+        </div>`;
+    }
+    playSound('success');
+  } catch (e) { log('❌ Diff failed: ' + (e.message || ''), 'error'); }
+}
+
 /* ═══════ TOOLS PANEL ═══════ */
 
 function openTools() {
@@ -2341,6 +2839,7 @@ if (toolsCloseBtn) toolsCloseBtn.onclick = closeTools;
 if (toolsOverlay) toolsOverlay.onclick = closeTools;
 
 gmailRenderAuth();
+checkUrlQuery();
 if (gmailCheckOnline()) {
   log('📧 Gmail Lab ready — connect your Google account!', 'success');
 }
