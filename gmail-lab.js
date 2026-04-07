@@ -253,7 +253,13 @@ function gmailLoadAPIs() {
 
 function gmailCheckReady() {
   if (gmailGapiInited && gmailGisInited) {
-    log('🟢 Ready — click "Sign in with Google"', 'info');
+    log('🟢 Ready — attempting auto sign-in…', 'info');
+    // Try silent re-auth (no popup if user previously consented)
+    try {
+      gmailTokenClient.requestAccessToken({ prompt: '' });
+    } catch {
+      log('🟢 Ready — click "Sign in with Google"', 'info');
+    }
   }
 }
 
