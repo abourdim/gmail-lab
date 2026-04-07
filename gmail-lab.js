@@ -535,7 +535,7 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
     html += '<p style="text-align:center;opacity:0.5;padding:1rem">No emails found.</p>';
   } else {
     for (const e of emails) {
-      const from = gmailEscHtml(e.from.replace(/<.*>/, '').trim() || e.from);
+      const from = gmailEscHtml((e.from||'').replace(/<.*>/, '').trim() || e.from);
       html += `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
         <div class="gmail-email-from">${from}</div>
         <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
@@ -564,7 +564,7 @@ async function gmailLoadMore(query, pageToken) {
     if (oldBtn) oldBtn.remove();
     if (body) {
       for (const e of result.emails) {
-        const from = gmailEscHtml(e.from.replace(/<.*>/, '').trim() || e.from);
+        const from = gmailEscHtml((e.from||'').replace(/<.*>/, '').trim() || e.from);
         body.insertAdjacentHTML('beforeend', `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
           <div class="gmail-email-from">${from}</div>
           <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
@@ -883,7 +883,7 @@ function emailsToTxt(emails) {
 
 function exportVerifySummary(emails, format) {
   const total = emails.length;
-  const failed = emails.filter(e => !e.from && !e.subject || (e.subject || '').includes('(error') || (e.subject || '').includes('(failed') || (e.subject || '').includes('(parse error')).length;
+  const failed = emails.filter(e => (!e.from && !e.subject) || (e.subject || '').includes('(error') || (e.subject || '').includes('(failed') || (e.subject || '').includes('(parse error')).length;
   const ok = total - failed;
   const senders = new Set(emails.filter(e => e.from).map(e => e.from.toLowerCase())).size;
   const dates = emails.map(e => e.date).filter(Boolean).map(d => new Date(d)).filter(d => !isNaN(d)).sort((a, b) => a - b);
@@ -1926,8 +1926,9 @@ function closeTip() {
 let attachmentData = [];
 
 async function gmailScanAttachments() {
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!insightGuard()) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const btn = document.getElementById('scanAttachBtn');
   const status = document.getElementById('attachStatus');
   if (btn) btn.disabled = true;
@@ -2067,7 +2068,7 @@ async function gmailBuildDigest(period) {
   container.innerHTML = '<p style="text-align:center;opacity:0.5">Generating digest…</p>';
   try {
     const senderMap = {};
-    let totalEmails = 0, unread = 0, starred = 0, withAttach = 0;
+    let totalEmails = 0, unread = 0, starred = 0;
     let pageToken = null;
     do {
       const p = { userId: 'me', q, maxResults: 250 };
@@ -2105,7 +2106,7 @@ async function gmailBuildDigest(period) {
       </div>`;
     log(`📰 Digest (${periodLabel}): ${totalEmails} emails, ${unread} unread`, 'success');
     playSound('success');
-  } catch (e) { log('❌ ' + (e.message || ''), 'error'); container.innerHTML = ''; }
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); container.innerHTML = ''; insightDone(); }
 }
 
 /* ═══════ BULK CLIPBOARD ═══════ */
@@ -2185,7 +2186,7 @@ async function gmailAnalyzeSize() {
       </div>
       ${bigEmails.length ? `<h4 class="stats-section-title">🐘 Heaviest Emails</h4>${bigEmails.slice(0, 10).map(e => {
         const sz = (e.size / 1048576).toFixed(1);
-        const sender = e.from.replace(/<.*>/, '').trim();
+        const sender = (e.from||'').replace(/<.*>/, '').trim();
         return `<div class="gmail-contact-item" style="padding:6px 10px"><div class="gmail-contact-info"><span class="gmail-contact-name">${gmailEscHtml(e.subject || '(no subject)')}</span><span class="gmail-contact-email">${gmailEscHtml(sender)} · ${gmailFormatDate(e.date)}</span></div><span style="font-weight:700;color:var(--accent)">${sz} MB</span></div>`;
       }).join('')}` : ''}`;
     log(`📦 Size: ${totalMB} MB total, avg ${avgKB} KB, ${bigEmails.length} large emails`, 'success');
@@ -2505,6 +2506,7 @@ function printEmail() {
   const email = window._lastEmail;
   if (!email) return;
   const win = window.open('', '_blank');
+  if (!win) { showToast('Popup blocked — allow popups for PDF', 3000); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${gmailEscHtml(email.subject)}</title>
     <style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#333}
     h1{font-size:1.3rem;border-bottom:2px solid #333;padding-bottom:8px}
