@@ -464,7 +464,6 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
     <div class="gmail-results-header">
       <span class="gmail-results-title">📨 ${gmailEscHtml(title)}</span>
       <span class="gmail-results-stats" id="resultsStats">${statsText}</span>
-      <button class="gmail-count-btn" onclick="gmailExactCount()" title="Get exact count">🔢 Count</button>
       <button class="gmail-save-result-btn" onclick="saveSearch('${gmailEscJs(query||'')}','${gmailEscJs(title||'')}')" title="Save this search">⭐</button>
       <div class="gmail-export-wrap">
         <button class="gmail-export-btn" onclick="toggleExportMenu()">⬇️ Export</button>
@@ -773,6 +772,27 @@ async function gmailExactCount() {
     log('❌ Count failed: ' + (e.message || ''), 'error');
     if (statsEl) statsEl.textContent = 'Count failed';
   }
+}
+
+/* ═══════ BACKGROUND EXACT COUNT ═══════ */
+
+async function gmailExactCountBg(query) {
+  if (!gmailAccessToken) return;
+  const statsEl = document.getElementById('resultsStats');
+  let total = 0;
+  let pageToken = null;
+  try {
+    do {
+      const p = { userId: 'me', q: query || '', maxResults: 500 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      total += (r.result.messages || []).length;
+      pageToken = r.result.nextPageToken;
+      if (statsEl) statsEl.textContent = `counting… ${total}`;
+    } while (pageToken);
+    gmailTotalFound = total;
+    if (statsEl) statsEl.textContent = `${total} found · showing ${gmailTotalLoaded}`;
+  } catch {}
 }
 
 /* ═══════ EXPORT EMAILS ═══════ */
@@ -1270,11 +1290,14 @@ function saveCurrentSearch() {
   saveSearch(val, val.slice(0, 40));
 }
 
-// Hook into gmailRunSearch to track history
+// Hook into gmailRunSearch to track history + auto count
 const _origRunSearch = gmailRunSearch;
 gmailRunSearch = async function(query, title, max) {
   addToHistory(query, title);
-  return _origRunSearch(query, title, max);
+  const result = await _origRunSearch(query, title, max);
+  // Auto count in background
+  gmailExactCountBg(query);
+  return result;
 };
 
 /* ═══════ CONTACT BOOK ═══════ */
