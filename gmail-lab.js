@@ -430,8 +430,10 @@ function gmailShowError(msg) {
 }
 
 let gmailTotalLoaded = 0;
-
 let gmailTotalFound = 0;
+let gmailLastQuery = '';
+let gmailLastTitle = '';
+let gmailLoadedEmails = [];
 
 function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) {
   const container = document.getElementById('resultsContainer');
@@ -440,12 +442,39 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
   const unreadCount = emails.filter(e => e.unread).length;
   const statsText = `~${gmailTotalFound} found · showing ${gmailTotalLoaded}${unreadCount ? ` · ${unreadCount} unread` : ''}`;
 
+  // Store current query for export
+  gmailLastQuery = query || '';
+  gmailLastTitle = title || '';
+  gmailLoadedEmails = emails.slice();
+
   let html = `<div class="gmail-results">
     <div class="gmail-results-header">
       <span class="gmail-results-title">📨 ${gmailEscHtml(title)}</span>
       <span class="gmail-results-stats" id="resultsStats">${statsText}</span>
+      <div class="gmail-export-wrap">
+        <button class="gmail-export-btn" onclick="toggleExportMenu()">⬇️ Export</button>
+        <div class="gmail-export-menu" id="exportMenu" style="display:none">
+          <div class="gmail-export-group">
+            <div class="gmail-export-label">Export loaded (${emails.length})</div>
+            <button onclick="gmailExportLoaded('csv')">CSV</button>
+            <button onclick="gmailExportLoaded('json')">JSON</button>
+            <button onclick="gmailExportLoaded('txt')">TXT</button>
+          </div>
+          <div class="gmail-export-group">
+            <div class="gmail-export-label">Export all (~${gmailTotalFound})</div>
+            <button onclick="gmailExportAll('csv')">CSV</button>
+            <button onclick="gmailExportAll('json')">JSON</button>
+            <button onclick="gmailExportAll('txt')">TXT</button>
+          </div>
+        </div>
+      </div>
       <button class="gmail-results-close" onclick="this.closest('.gmail-results').remove()">✕</button>
-    </div><div class="gmail-results-body">`;
+    </div>
+    <div id="exportProgress" class="gmail-export-progress" style="display:none">
+      <div class="gmail-export-bar"><div class="gmail-export-fill" id="exportFill"></div></div>
+      <span id="exportProgressText">0%</span>
+    </div>
+    <div class="gmail-results-body">`;
 
   if (!emails.length) {
     html += '<p style="text-align:center;opacity:0.5;padding:1rem">No emails found.</p>';
@@ -493,6 +522,7 @@ async function gmailLoadMore(query, pageToken) {
       }
     }
     gmailTotalLoaded += result.emails.length;
+    gmailLoadedEmails.push(...result.emails);
     if (result.totalEstimate) gmailTotalFound = result.totalEstimate;
     const statsEl = document.getElementById('resultsStats');
     if (statsEl) statsEl.textContent = `~${gmailTotalFound} found · showing ${gmailTotalLoaded}`;
@@ -665,6 +695,149 @@ function gmailBuildExamples() {
     };
     container.appendChild(btn);
   });
+}
+
+/* ═══════ EXPORT EMAILS ═══════ */
+
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+  playSound('click');
+}
+
+// Close export menu when clicking outside
+document.addEventListener('click', e => {
+  const menu = document.getElementById('exportMenu');
+  if (menu && menu.style.display !== 'none' && !e.target.closest('.gmail-export-wrap')) {
+    menu.style.display = 'none';
+  }
+});
+
+function emailToRow(e) {
+  return {
+    from: (e.from || '').replace(/"/g, '""'),
+    subject: (e.subject || '').replace(/"/g, '""'),
+    date: e.date || '',
+    snippet: (e.snippet || '').replace(/"/g, '""'),
+    unread: e.unread ? 'Yes' : 'No',
+    id: e.id || ''
+  };
+}
+
+function emailsToCsv(emails) {
+  const header = 'From,Subject,Date,Snippet,Unread,ID';
+  const rows = emails.map(e => {
+    const r = emailToRow(e);
+    return `"${r.from}","${r.subject}","${r.date}","${r.snippet}","${r.unread}","${r.id}"`;
+  });
+  return header + '\n' + rows.join('\n');
+}
+
+function emailsToJson(emails) {
+  return JSON.stringify(emails.map(e => ({
+    from: e.from, subject: e.subject, date: e.date,
+    snippet: e.snippet, unread: e.unread, id: e.id,
+    threadId: e.threadId
+  })), null, 2);
+}
+
+function emailsToTxt(emails) {
+  return emails.map((e, i) => {
+    return `--- Email ${i + 1} ---\nFrom: ${e.from}\nSubject: ${e.subject}\nDate: ${e.date}\nUnread: ${e.unread ? 'Yes' : 'No'}\n\n${e.snippet}\n`;
+  }).join('\n');
+}
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  log(`💾 Exported: ${filename}`, 'success');
+  playSound('success');
+}
+
+function gmailExportLoaded(format) {
+  const menu = document.getElementById('exportMenu');
+  if (menu) menu.style.display = 'none';
+
+  if (!gmailLoadedEmails.length) {
+    log('❌ No emails to export', 'error');
+    return;
+  }
+
+  const ts = new Date().toISOString().slice(0, 10);
+  const prefix = `gmail-${gmailLastTitle.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${ts}`;
+
+  if (format === 'csv') {
+    downloadFile(emailsToCsv(gmailLoadedEmails), `${prefix}.csv`, 'text/csv');
+  } else if (format === 'json') {
+    downloadFile(emailsToJson(gmailLoadedEmails), `${prefix}.json`, 'application/json');
+  } else {
+    downloadFile(emailsToTxt(gmailLoadedEmails), `${prefix}.txt`, 'text/plain');
+  }
+  log(`📊 Exported ${gmailLoadedEmails.length} loaded emails as ${format.toUpperCase()}`, 'info');
+}
+
+async function gmailExportAll(format) {
+  const menu = document.getElementById('exportMenu');
+  if (menu) menu.style.display = 'none';
+
+  if (!gmailAccessToken || !gmailLastQuery && gmailLastQuery !== '') {
+    log('❌ No search to export', 'error');
+    return;
+  }
+
+  if (!(await gmailEnsureToken())) return;
+
+  const progressEl = document.getElementById('exportProgress');
+  const fillEl = document.getElementById('exportFill');
+  const textEl = document.getElementById('exportProgressText');
+  if (progressEl) progressEl.style.display = 'flex';
+
+  const allEmails = [];
+  let pageToken = null;
+  let page = 0;
+  const estimate = gmailTotalFound || 100;
+
+  log(`⬇️ Exporting all ~${estimate} emails…`, 'info');
+
+  try {
+    do {
+      const result = await gmailSearch(gmailLastQuery, 100, pageToken);
+      allEmails.push(...result.emails);
+      pageToken = result.nextPageToken;
+      page++;
+
+      const pct = Math.min(100, Math.round((allEmails.length / estimate) * 100));
+      if (fillEl) fillEl.style.width = pct + '%';
+      if (textEl) textEl.textContent = `${allEmails.length} / ~${estimate}`;
+
+      // Safety: max 2000 emails to avoid rate limits
+      if (allEmails.length >= 2000) {
+        log('⚠️ Export capped at 2000 emails (rate limit protection)', 'info');
+        break;
+      }
+    } while (pageToken);
+
+    const ts = new Date().toISOString().slice(0, 10);
+    const prefix = `gmail-ALL-${gmailLastTitle.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${ts}`;
+
+    if (format === 'csv') {
+      downloadFile(emailsToCsv(allEmails), `${prefix}.csv`, 'text/csv');
+    } else if (format === 'json') {
+      downloadFile(emailsToJson(allEmails), `${prefix}.json`, 'application/json');
+    } else {
+      downloadFile(emailsToTxt(allEmails), `${prefix}.txt`, 'text/plain');
+    }
+    log(`📊 Exported ALL ${allEmails.length} emails as ${format.toUpperCase()}`, 'success');
+  } catch (e) {
+    log('❌ Export failed: ' + (e.message || ''), 'error');
+  }
+
+  if (progressEl) progressEl.style.display = 'none';
+  if (fillEl) fillEl.style.width = '0%';
 }
 
 /* ═══════ OFFLINE HANDLING ═══════ */
