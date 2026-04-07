@@ -91,7 +91,7 @@ function gmailEnableButtons(enabled) {
   if (cs) cs.disabled = !enabled;
   if (ec) ec.disabled = !enabled;
   if (sb) sb.disabled = !enabled;
-  ['scanAttachBtn','exportAttachBtn','wordCloudBtn','digestDayBtn','digestWeekBtn','digestMonthBtn','sizeBtn','scoreBtn'].forEach(id => {
+  ['scanAttachBtn','exportAttachBtn','wordCloudBtn','digestDayBtn','digestWeekBtn','digestMonthBtn','sizeBtn','scoreBtn','exportAllCsvBtn','exportAllJsonBtn','exportAllTxtBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !enabled;
   });
@@ -2082,6 +2082,110 @@ function checkShortcut(btn, chosen, correct) {
 function updateShortcutScore() {
   const el = document.getElementById('shortcutScore');
   if (el) el.textContent = `${scCorrect}/${scTotal} correct`;
+}
+
+/* ═══════ EXPORT ALL INBOX ═══════ */
+
+async function gmailExportAllInbox(format) {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+
+  const progressEl = document.getElementById('exportAllProgress');
+  const fillEl = document.getElementById('exportAllFill');
+  const textEl = document.getElementById('exportAllText');
+  const infoEl = document.getElementById('exportAllInfo');
+  if (progressEl) progressEl.style.display = 'flex';
+  if (infoEl) infoEl.textContent = 'Starting…';
+
+  const allIds = [];
+  let pageToken = null;
+  const maxEmails = 3000;
+
+  log(`💾 Exporting entire inbox (max ${maxEmails})…`, 'info');
+
+  try {
+    // Step 1: Collect all message IDs
+    do {
+      const p = { userId: 'me', maxResults: 500 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      allIds.push(...(r.result.messages || []).map(m => m.id));
+      pageToken = r.result.nextPageToken;
+      if (textEl) textEl.textContent = `IDs: ${allIds.length}`;
+      if (infoEl) infoEl.textContent = `Collecting message IDs… ${allIds.length} so far`;
+      if (allIds.length >= maxEmails) {
+        log(`⚠️ Capped at ${maxEmails} emails`, 'info');
+        break;
+      }
+    } while (pageToken);
+
+    if (infoEl) infoEl.textContent = `Found ${allIds.length} emails. Fetching metadata…`;
+    log(`📦 Fetching metadata for ${allIds.length} emails…`, 'info');
+
+    // Step 2: Fetch metadata
+    const allEmails = [];
+    for (let i = 0; i < allIds.length; i++) {
+      let retries = 2;
+      while (retries > 0) {
+        try {
+          const d = await gapi.client.gmail.users.messages.get({
+            userId: 'me', id: allIds[i], format: 'metadata',
+            metadataHeaders: ['From', 'To', 'Subject', 'Date']
+          });
+          const h = d.result.payload.headers;
+          const get = n => (h.find(x => x.name === n) || {}).value || '';
+          allEmails.push({
+            id: allIds[i], from: get('From'), to: get('To'),
+            subject: get('Subject'), date: get('Date'),
+            snippet: d.result.snippet,
+            unread: (d.result.labelIds || []).includes('UNREAD'),
+            labels: (d.result.labelIds || []).join('; '),
+            size: d.result.sizeEstimate || 0
+          });
+          break;
+        } catch {
+          retries--;
+          if (retries > 0) await new Promise(r => setTimeout(r, 2000));
+          else allEmails.push({ id: allIds[i], from: '', to: '', subject: '(error)', date: '', snippet: '', unread: false, labels: '', size: 0 });
+        }
+      }
+
+      const pct = Math.round(((i + 1) / allIds.length) * 100);
+      if (fillEl) fillEl.style.width = pct + '%';
+      if (textEl) textEl.textContent = `${i + 1} / ${allIds.length}`;
+      if ((i + 1) % 25 === 0) {
+        if (infoEl) infoEl.textContent = `${i + 1} of ${allIds.length} emails processed…`;
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+
+    // Step 3: Download
+    const ts = new Date().toISOString().slice(0, 10);
+    const prefix = `gmail-INBOX-${ts}`;
+
+    if (format === 'csv') {
+      const csv = 'From,To,Subject,Date,Snippet,Unread,Labels,Size\n' + allEmails.map(e => {
+        const esc = s => '"' + (s || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"';
+        return [esc(e.from), esc(e.to), esc(e.subject), esc(e.date), esc(e.snippet), e.unread ? 'Yes' : 'No', esc(e.labels), e.size].join(',');
+      }).join('\n');
+      downloadFile(csv, `${prefix}.csv`, 'text/csv');
+    } else if (format === 'json') {
+      downloadFile(JSON.stringify(allEmails, null, 2), `${prefix}.json`, 'application/json');
+    } else {
+      const txt = allEmails.map((e, i) => `--- Email ${i + 1} ---\nFrom: ${e.from}\nTo: ${e.to}\nSubject: ${e.subject}\nDate: ${e.date}\nLabels: ${e.labels}\nSize: ${e.size} bytes\n\n${e.snippet}\n`).join('\n');
+      downloadFile(txt, `${prefix}.txt`, 'text/plain');
+    }
+
+    if (infoEl) infoEl.textContent = `Done! Exported ${allEmails.length} emails as ${format.toUpperCase()}`;
+    log(`💾 Exported ${allEmails.length} inbox emails as ${format.toUpperCase()}`, 'success');
+    playSound('success');
+  } catch (e) {
+    log('❌ Export failed: ' + (e.message || ''), 'error');
+    if (infoEl) infoEl.textContent = 'Export failed: ' + (e.message || '');
+  }
+
+  if (progressEl) progressEl.style.display = 'none';
+  if (fillEl) fillEl.style.width = '0%';
 }
 
 /* ═══════ OFFLINE HANDLING ═══════ */

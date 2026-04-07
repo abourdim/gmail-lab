@@ -479,6 +479,16 @@
 /* ═══ DIGEST ═══ */
 .gmail-digest { margin-top: 8px; }
 
+/* ═══ TAKEOUT LINK ═══ */
+.gmail-takeout-link {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 16px; border-radius: 10px;
+  background: rgba(66,133,244,.1); border: 1px solid rgba(66,133,244,.25);
+  color: #4285f4; text-decoration: none; transition: all .2s;
+}
+.gmail-takeout-link:hover { background: rgba(66,133,244,.18); }
+.light-theme .gmail-takeout-link { background: rgba(66,133,244,.06); }
+
 /* ═══ MODAL ═══ */
 .gmail-modal-overlay {
   position: fixed; inset: 0; z-index: 10000;
