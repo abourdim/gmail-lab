@@ -326,9 +326,43 @@ async function gmailLoadStats() {
     const el = document.getElementById('gmailStats');
     if (el) el.textContent = `${Number(s.messagesTotal).toLocaleString()} emails · ${Number(s.threadsTotal).toLocaleString()} threads`;
     log('📊 ' + s.messagesTotal + ' emails, ' + s.threadsTotal + ' threads', 'rx');
+    // Check unread count
+    gmailCheckUnread();
   } catch (e) {
     log('⚠️ Could not load stats: ' + (e.message || ''), 'error');
   }
+}
+
+async function gmailCheckUnread() {
+  try {
+    const r = await gapi.client.gmail.users.messages.list({ userId: 'me', q: 'is:unread', maxResults: 1 });
+    const unreadCount = r.result.resultSizeEstimate || 0;
+    if (unreadCount > 0) {
+      // Update stats display
+      const el = document.getElementById('gmailStats');
+      if (el) el.textContent += ` · 📬 ${unreadCount} unread`;
+      log(`📬 You have ~${unreadCount} unread emails`, 'info');
+
+      // Show toast
+      showToast(`📬 ${unreadCount} unread emails`, 4000);
+
+      // Browser notification (if permitted)
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          new Notification('Gmail Lab', { body: `You have ~${unreadCount} unread emails`, icon: 'icon-192.png' });
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(p => {
+            if (p === 'granted') {
+              new Notification('Gmail Lab', { body: `You have ~${unreadCount} unread emails`, icon: 'icon-192.png' });
+            }
+          });
+        }
+      }
+
+      // Update page title with unread count
+      document.title = `(${unreadCount}) Gmail Lab — Workshop DIY`;
+    }
+  } catch {}
 }
 
 /* ═══════ TOKEN CHECK ═══════ */
