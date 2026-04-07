@@ -218,6 +218,17 @@
   border-radius: 3px; font-size: 0.83em; color: var(--c-accent, #d4a73a);
 }
 
+/* ═══ RESULTS STATS ═══ */
+.gmail-results-stats {
+  font-size: 0.75rem;
+  color: var(--accent, #d4a03c);
+  background: rgba(212,160,60,.12);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ═══ MODAL ═══ */
 .gmail-modal-overlay {
   position: fixed; inset: 0; z-index: 10000;

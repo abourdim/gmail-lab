@@ -422,11 +422,18 @@ function gmailShowError(msg) {
   `;
 }
 
+let gmailTotalLoaded = 0;
+
 function gmailShowEmailList(title, emails, query, nextPageToken) {
   const container = document.getElementById('resultsContainer');
+  gmailTotalLoaded = emails.length;
+  const unreadCount = emails.filter(e => e.unread).length;
+  const statsText = `${emails.length} result${emails.length !== 1 ? 's' : ''}${unreadCount ? ` · ${unreadCount} unread` : ''}`;
+
   let html = `<div class="gmail-results">
     <div class="gmail-results-header">
       <span class="gmail-results-title">📨 ${gmailEscHtml(title)}</span>
+      <span class="gmail-results-stats" id="resultsStats">${statsText}</span>
       <button class="gmail-results-close" onclick="this.closest('.gmail-results').remove()">✕</button>
     </div><div class="gmail-results-body">`;
 
@@ -449,6 +456,7 @@ function gmailShowEmailList(title, emails, query, nextPageToken) {
   html += '</div></div>';
   container.innerHTML = html;
   container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  log(`📊 ${statsText}`, 'info');
 }
 
 async function gmailLoadMore(query, pageToken) {
@@ -474,6 +482,10 @@ async function gmailLoadMore(query, pageToken) {
         body.insertAdjacentHTML('beforeend', `<button class="gmail-load-more" onclick="gmailLoadMore('${query.replace(/'/g,"\\'")}','${result.nextPageToken}')">Load more…</button>`);
       }
     }
+    gmailTotalLoaded += result.emails.length;
+    const statsEl = document.getElementById('resultsStats');
+    if (statsEl) statsEl.textContent = `${gmailTotalLoaded} results loaded`;
+    log(`📊 +${result.emails.length} loaded (${gmailTotalLoaded} total)`, 'info');
     playSound('success');
   } catch (e) {
     log('❌ ' + (e.message || 'Load more failed'), 'error');
