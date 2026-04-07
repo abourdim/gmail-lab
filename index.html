@@ -58,6 +58,7 @@
 
         <div class="header-right">
           <div class="header-buttons">
+            <button id="toolsBtn" class="btn-icon-only" aria-label="Tools" onclick="openTools()">🧰</button>
             <button id="helpBtn" class="btn-icon-only" aria-label="Help">❓</button>
             <button id="settingsBtn" class="btn-icon-only" aria-label="Settings">⚙️</button>
             <button id="logBtn" class="btn-icon-only" aria-label="Activity Log">📜</button>
@@ -69,7 +70,7 @@
         </div>
       </div>
 
-      <!-- ═══════════════════ AUTH CARD ═══════════════════ -->
+      <!-- ═══════════════════ AUTH CARD (compact) ═══════════════════ -->
       <div class="card" id="authCard">
         <div class="card-header">
           <div>
@@ -77,204 +78,19 @@
             <div class="card-subtitle"><span data-i18n="authDesc">Sign in with Google to explore your inbox</span></div>
           </div>
         </div>
-        <div id="authBody" style="padding:0.5rem 1rem 1rem">
-          <!-- Filled by JS -->
+        <div id="authBody" style="padding:0.5rem 1rem 1rem"></div>
+      </div>
+
+      <!-- ═══════════════════ SEARCH BAR (always visible) ═══════════════════ -->
+      <div class="card gmail-main-search">
+        <div class="gmail-search-row">
+          <input class="gmail-search-input" id="customInput" placeholder="Search your Gmail... e.g. from:mom is:unread" onkeydown="if(event.key==='Enter')runCustomSearch()" disabled />
+          <button class="gmail-search-btn" id="customSend" onclick="runCustomSearch()" disabled>🔍</button>
+          <button class="gmail-save-search-btn" onclick="saveCurrentSearch()" title="Save this search">⭐</button>
         </div>
       </div>
 
-      <!-- ═══════════════════ RESULTS AREA ═══════════════════ -->
-      <div id="resultsContainer"></div>
-
-      <!-- ═══════════════════ QUICK COMMANDS ═══════════════════ -->
-      <details class="collapsible" open>
-        <summary><span class="icon">🚀</span> <span data-i18n="sectionA">Quick Commands — Tap to Run!</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div id="exampleButtons"></div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ ASK ANYTHING ═══════════════════ -->
-      <details class="collapsible" open>
-        <summary><span class="icon">💬</span> <span data-i18n="sectionAsk">Ask Anything</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.88rem;opacity:0.6;margin-bottom:0.6rem" data-i18n="askDesc">Type any Gmail search and see the results live!</p>
-          <div class="gmail-search-row">
-            <input class="gmail-search-input" id="customInput" data-i18n-placeholder="askPlaceholder" placeholder="e.g. from:mom is:unread" onkeydown="if(event.key==='Enter')runCustomSearch()" disabled />
-            <button class="gmail-search-btn" id="customSend" onclick="runCustomSearch()" disabled><span data-i18n="askBtn">Search</span> 🔍</button>
-            <button class="gmail-save-search-btn" onclick="saveCurrentSearch()" title="Save this search">⭐</button>
-          </div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ SEARCH HISTORY & SAVED ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">🕐</span> <span data-i18n="sectionHistory">Search History & Saved</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div class="gmail-history-tabs">
-            <button class="gmail-htab active" onclick="showHistoryTab('recent')">🕐 Recent</button>
-            <button class="gmail-htab" onclick="showHistoryTab('saved')">⭐ Saved</button>
-          </div>
-          <div id="historyRecent" class="gmail-history-list"></div>
-          <div id="historySaved" class="gmail-history-list" style="display:none"></div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ EXPORT ALL INBOX ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">💾</span> <span>Export All Inbox</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.82rem;opacity:0.6;margin-bottom:8px">Export your entire inbox or use Google Takeout for a complete backup.</p>
-          <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px">
-            <button class="btn-sm" onclick="gmailExportAllInbox('csv')" id="exportAllCsvBtn" disabled>💾 All Inbox (CSV)</button>
-            <button class="btn-sm" onclick="gmailExportAllInbox('json')" id="exportAllJsonBtn" disabled>💾 All Inbox (JSON)</button>
-            <button class="btn-sm" onclick="gmailExportAllInbox('txt')" id="exportAllTxtBtn" disabled>💾 All Inbox (TXT)</button>
-          </div>
-          <div id="exportAllProgress" class="gmail-export-progress" style="display:none;margin-top:8px">
-            <div class="gmail-export-bar"><div class="gmail-export-fill" id="exportAllFill"></div></div>
-            <span id="exportAllText">0 / ?</span>
-          </div>
-          <div id="exportAllInfo" style="font-size:0.75rem;opacity:0.5;margin-top:8px"></div>
-          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
-            <p style="font-size:0.82rem;margin-bottom:6px"><b>For a complete backup (all 20,000+ emails):</b></p>
-            <a href="https://takeout.google.com/settings/takeout/custom/gmail" target="_blank" rel="noopener" class="gmail-takeout-link">
-              <span>📦 Google Takeout — Full Gmail Backup</span>
-              <span style="font-size:0.72rem;opacity:0.6">Official Google tool — exports everything as .mbox file</span>
-            </a>
-          </div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ CONTACT BOOK ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">👥</span> <span data-i18n="sectionContacts">Contact Book</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.85rem;opacity:0.6;margin-bottom:0.6rem">Auto-extracted from your emails</p>
-          <div class="gmail-contacts-bar">
-            <button class="btn-sm" onclick="gmailExtractContacts()" id="extractContactsBtn" disabled>🔍 Extract Contacts</button>
-            <button class="btn-sm" onclick="gmailExportContacts('csv')" id="exportContactsCsvBtn" disabled>💾 CSV</button>
-            <button class="btn-sm" onclick="gmailExportContacts('json')" id="exportContactsJsonBtn" disabled>💾 JSON</button>
-            <span class="gmail-contact-count" id="contactCount">0 contacts</span>
-          </div>
-          <div class="gmail-contacts-filter">
-            <input type="text" class="gmail-search-input" id="contactFilter" placeholder="Filter contacts..." oninput="filterContacts()" style="margin-top:8px" />
-          </div>
-          <div id="contactsList" class="gmail-contacts-list"></div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ EMAIL STATS ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">📊</span> <span data-i18n="sectionStats">Email Stats Dashboard</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div class="gmail-stats-bar">
-            <button class="btn-sm" onclick="gmailBuildStats()" id="buildStatsBtn" disabled>📊 Analyze Inbox</button>
-            <span class="gmail-stats-status" id="statsStatus"></span>
-          </div>
-          <div id="statsDashboard" class="gmail-stats-dashboard"></div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ FILTER BUILDER ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">🔧</span> <span data-i18n="sectionFilter">Filter Builder</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Build a Gmail search query visually</p>
-          <div class="gmail-filter-grid">
-            <label>From</label><input type="text" id="fbFrom" class="gmail-filter-input" placeholder="sender name or email" />
-            <label>To</label><input type="text" id="fbTo" class="gmail-filter-input" placeholder="recipient" />
-            <label>Subject</label><input type="text" id="fbSubject" class="gmail-filter-input" placeholder="keyword" />
-            <label>Has words</label><input type="text" id="fbWords" class="gmail-filter-input" placeholder="any words in body" />
-            <label>After</label><input type="date" id="fbAfter" class="gmail-filter-input" />
-            <label>Before</label><input type="date" id="fbBefore" class="gmail-filter-input" />
-            <label>Options</label>
-            <div class="gmail-filter-checks">
-              <label><input type="checkbox" id="fbUnread" /> Unread</label>
-              <label><input type="checkbox" id="fbStarred" /> Starred</label>
-              <label><input type="checkbox" id="fbAttach" /> Attachments</label>
-            </div>
-          </div>
-          <div class="gmail-filter-preview">
-            <code id="fbPreview"></code>
-          </div>
-          <div class="gmail-filter-actions">
-            <button class="btn-sm" onclick="fbUpdatePreview()">🔄 Preview</button>
-            <button class="btn-sm" onclick="fbRun()" style="background:var(--accent);color:#fff">🔍 Search</button>
-            <button class="btn-sm" onclick="fbClear()">🧹 Clear</button>
-          </div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ GMAIL QUIZ ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">🧠</span> <span data-i18n="sectionQuiz">Gmail Search Quiz</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Test your Gmail search skills!</p>
-          <div id="gmailQuizContainer"></div>
-          <div id="gmailQuizResult" class="gmail-quiz-result" style="display:none"></div>
-          <button class="btn-sm" onclick="resetGmailQuiz()" style="margin-top:8px">🔄 Try Again</button>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ HOW IT WORKS ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">🧠</span> <span data-i18n="sectionB">How It Works</span></summary>
-        <div class="card" style="padding:0.8rem 1rem;line-height:1.6">
-          <div class="how-step"><strong>1️⃣</strong> <span data-i18n="how1">You sign in with your Google account above.</span></div>
-          <div class="how-step"><strong>2️⃣</strong> <span data-i18n="how2">This app gets <b>read-only</b> access to your Gmail.</span></div>
-          <div class="how-step"><strong>3️⃣</strong> <span data-i18n="how3">Tap any quick command or type a search to query your inbox.</span></div>
-          <div class="how-step"><strong>4️⃣</strong> <span data-i18n="how4">Results appear right here — click any email to read it!</span></div>
-          <div class="gmail-tip" style="margin-top:0.8rem">
-            <strong>🔒 </strong><span data-i18n="howPrivacy">Privacy: Your emails go directly from Google to your browser. Nothing is stored or sent anywhere else. You can sign out anytime.</span>
-          </div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ DATE RANGE SEARCH ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">📅</span> <span data-i18n="sectionDateRange">Date Range Search</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div class="gmail-date-grid">
-            <div class="gmail-date-field">
-              <label>From</label>
-              <input type="date" id="drFrom" class="gmail-filter-input" />
-            </div>
-            <div class="gmail-date-field">
-              <label>To</label>
-              <input type="date" id="drTo" class="gmail-filter-input" />
-            </div>
-            <div class="gmail-date-field">
-              <label>Sender (optional)</label>
-              <input type="text" id="drSender" class="gmail-filter-input" placeholder="e.g. ahmed" />
-            </div>
-          </div>
-          <div class="gmail-date-presets">
-            <button class="btn-sm" onclick="drPreset('today')">Today</button>
-            <button class="btn-sm" onclick="drPreset('week')">This week</button>
-            <button class="btn-sm" onclick="drPreset('month')">This month</button>
-            <button class="btn-sm" onclick="drPreset('3months')">3 months</button>
-            <button class="btn-sm" onclick="drPreset('year')">This year</button>
-          </div>
-          <button class="btn-sm" onclick="drSearch()" style="background:var(--accent);color:#fff;margin-top:8px;width:100%">🔍 Search Date Range</button>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ EMAIL TEMPLATES ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">📝</span> <span data-i18n="sectionTemplates">Email Templates</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Copy-paste ready responses</p>
-          <div class="gmail-tpl-tabs" id="tplTabs"></div>
-          <div id="tplContainer" class="gmail-tpl-list"></div>
-          <div class="gmail-tpl-custom" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-            <p style="font-size:0.78rem;opacity:0.5;margin-bottom:6px">Add your own template:</p>
-            <input type="text" id="tplName" class="gmail-filter-input" placeholder="Template name" style="margin-bottom:4px;width:100%" />
-            <textarea id="tplBody" class="gmail-filter-input" placeholder="Template text..." rows="3" style="width:100%;resize:vertical"></textarea>
-            <button class="btn-sm" onclick="addCustomTemplate()" style="margin-top:6px">➕ Save Template</button>
-          </div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ TIP OF THE DAY ═══════════════════ -->
+      <!-- ═══════════════════ TIP OF THE DAY (toast style) ═══════════════════ -->
       <div class="gmail-tip-banner" id="tipBanner" style="display:none">
         <span class="gmail-tip-icon">💡</span>
         <span class="gmail-tip-text" id="tipText"></span>
@@ -282,146 +98,233 @@
         <button class="gmail-tip-close" onclick="closeTip()">✕</button>
       </div>
 
-      <!-- ═══════════════════ ATTACHMENT MANAGER ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">📎</span> <span>Attachment Manager</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div class="gmail-stats-bar">
-            <button class="btn-sm" onclick="gmailScanAttachments()" id="scanAttachBtn" disabled>📎 Scan Attachments</button>
-            <select id="attachSort" class="gmail-filter-input" style="width:auto" onchange="renderAttachments()">
-              <option value="date">By date</option>
-              <option value="size">By size</option>
-              <option value="name">By name</option>
-              <option value="sender">By sender</option>
-            </select>
-            <button class="btn-sm" onclick="exportAttachmentList()" id="exportAttachBtn" disabled>💾 Export</button>
-            <span id="attachStatus" class="gmail-stats-status"></span>
-          </div>
-          <div class="gmail-contacts-filter">
-            <input type="text" class="gmail-search-input" id="attachFilter" placeholder="Filter by name, type, sender..." oninput="renderAttachments()" style="margin-top:4px" />
-          </div>
-          <div id="attachList" class="gmail-contacts-list" style="max-height:500px"></div>
-        </div>
-      </details>
+      <!-- ═══════════════════ RESULTS AREA ═══════════════════ -->
+      <div id="resultsContainer"></div>
 
-      <!-- ═══════════════════ WORD CLOUD ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">☁️</span> <span>Word Cloud</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div class="gmail-stats-bar">
-            <button class="btn-sm" onclick="gmailBuildWordCloud()" id="wordCloudBtn" disabled>☁️ Generate</button>
-            <span id="wordCloudStatus" class="gmail-stats-status"></span>
-          </div>
-          <div id="wordCloudContainer" class="gmail-wordcloud"></div>
+      <!-- ═══════════════════ SETUP (first-time only) ═══════════════════ -->
+      <div id="setupGuide" class="card" style="display:none;padding:0.8rem 1rem;line-height:1.6;font-size:0.9rem">
+        <div class="card-header" style="margin-bottom:8px">
+          <div class="card-title"><span class="icon">🔧</span> Setup — Get Your Google Client ID</div>
+          <button class="btn-icon-only" onclick="document.getElementById('setupGuide').style.display='none'">✕</button>
         </div>
-      </details>
-
-      <!-- ═══════════════════ EMAIL DIGEST ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">📰</span> <span>Email Digest</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div class="gmail-stats-bar">
-            <button class="btn-sm" onclick="gmailBuildDigest('day')" id="digestDayBtn" disabled>📰 Today</button>
-            <button class="btn-sm" onclick="gmailBuildDigest('week')" id="digestWeekBtn" disabled>📰 This Week</button>
-            <button class="btn-sm" onclick="gmailBuildDigest('month')" id="digestMonthBtn" disabled>📰 This Month</button>
-          </div>
-          <div id="digestContainer" class="gmail-digest"></div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ BULK CLIPBOARD ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">📋</span> <span>Bulk Clipboard</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Select emails from results, then bulk copy</p>
-          <div class="gmail-stats-bar">
-            <button class="btn-sm" onclick="bulkCopy('subjects')">📋 Subjects</button>
-            <button class="btn-sm" onclick="bulkCopy('senders')">📋 Senders</button>
-            <button class="btn-sm" onclick="bulkCopy('snippets')">📋 Snippets</button>
-            <button class="btn-sm" onclick="bulkCopy('all')">📋 All</button>
-          </div>
-          <p id="bulkInfo" style="font-size:0.75rem;opacity:0.4;margin-top:6px"></p>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ EMAIL SIZE ANALYZER ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">📦</span> <span>Email Size Analyzer</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div class="gmail-stats-bar">
-            <button class="btn-sm" onclick="gmailAnalyzeSize()" id="sizeBtn" disabled>📦 Analyze</button>
-            <span id="sizeStatus" class="gmail-stats-status"></span>
-          </div>
-          <div id="sizeContainer" class="gmail-stats-dashboard"></div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ INBOX SCORE ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">🏆</span> <span>Inbox Score</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <div class="gmail-stats-bar">
-            <button class="btn-sm" onclick="gmailCalcInboxScore()" id="scoreBtn" disabled>🏆 Calculate</button>
-          </div>
-          <div id="scoreContainer"></div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ SHORTCUTS TRAINER ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">⌨️</span> <span>Gmail Shortcuts Trainer</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Practice Gmail keyboard shortcuts!</p>
-          <div id="shortcutChallenge" class="gmail-shortcut-challenge"></div>
-          <div class="gmail-stats-bar" style="margin-top:8px">
-            <button class="btn-sm" onclick="nextShortcutChallenge()">⏭️ Next</button>
-            <span id="shortcutScore" class="gmail-stats-status"></span>
-          </div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ CHEAT SHEET ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">📋</span> <span data-i18n="sectionC">Gmail Search Cheat Sheet</span></summary>
-        <div class="card" style="padding:0.8rem 1rem;line-height:1.6">
-          <div class="gmail-cheat-grid">
-            <code>from:</code><span data-i18n="cs_from">Find emails from someone</span>
-            <code>to:</code><span data-i18n="cs_to">Find emails you sent to someone</span>
-            <code>subject:</code><span data-i18n="cs_subject">Search by subject line</span>
-            <code>is:unread</code><span data-i18n="cs_unread">Only unread emails</span>
-            <code>is:starred</code><span data-i18n="cs_starred">Only starred emails</span>
-            <code>has:attachment</code><span data-i18n="cs_attach">Emails with files attached</span>
-            <code>after: / before:</code><span data-i18n="cs_date">Date range (e.g. after:2025/01/01)</span>
-            <code>newer_than:7d</code><span data-i18n="cs_newer">Last 7 days</span>
-            <code>label:</code><span data-i18n="cs_label">Filter by label name</span>
-          </div>
-          <div class="gmail-tip" style="margin-top:0.8rem">
-            <strong>🤓 </strong><span data-i18n="csTip">Pro tip: You can combine them! Try <code>from:teacher is:unread has:attachment</code></span>
-          </div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ SETUP GUIDE ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">🔧</span> <span data-i18n="sectionSetup">Setup — Get Your Google Client ID</span></summary>
-        <div class="card" style="padding:0.8rem 1rem;line-height:1.6;font-size:0.9rem">
-          <p data-i18n="setupIntro"><strong>To use this app, you need a free Google OAuth Client ID.</strong> Here's how:</p>
-          <ol class="gmail-setup-list">
-            <li data-i18n="setup1">Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console → Credentials</a></li>
-            <li data-i18n="setup2">Create a project (or select existing)</li>
-            <li data-i18n="setup3">Click <b>"+ CREATE CREDENTIALS"</b> → <b>"OAuth client ID"</b></li>
-            <li data-i18n="setup4">Application type: <b>"Web application"</b></li>
-            <li data-i18n="setup5">Under <b>"Authorized JavaScript origins"</b>, add your URL (e.g. <code>http://localhost:8080</code>)</li>
-            <li data-i18n="setup6">Click <b>"Create"</b> and copy your <b>Client ID</b></li>
-            <li data-i18n="setup7">Go to <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">API Library → Gmail API</a> and click <b>"Enable"</b></li>
-            <li data-i18n="setup8">Paste the Client ID in the field at the top of this app</li>
-          </ol>
-          <p style="margin-top:0.5rem;opacity:0.6" data-i18n="setupNote">Your Client ID looks like: <code>123456-abc.apps.googleusercontent.com</code></p>
-          <p style="margin-top:0.3rem;opacity:0.6" data-i18n="setupTest"><b>Note:</b> For testing, add your Google account as a "Test user" under OAuth consent screen settings.</p>
-        </div>
-      </details>
+        <ol class="gmail-setup-list">
+          <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console → Credentials</a></li>
+          <li>Create a project (or select existing)</li>
+          <li>Click <b>"+ CREATE CREDENTIALS"</b> → <b>"OAuth client ID"</b></li>
+          <li>Application type: <b>"Web application"</b></li>
+          <li>Under <b>"Authorized JavaScript origins"</b>, add your URL</li>
+          <li>Click <b>"Create"</b> and copy your <b>Client ID</b></li>
+          <li>Go to <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">API Library → Gmail API</a> → <b>Enable</b></li>
+          <li>Paste the Client ID above</li>
+        </ol>
+        <p style="opacity:0.6;font-size:0.82rem">Add your Gmail as a "Test user" under OAuth consent screen.</p>
+      </div>
 
     </div>
+
+    </div><!-- end rows-container -->
+
+  <!-- ═══════════════════ FLOATING QUICK COMMANDS BAR ═══════════════════ -->
+  <div class="quick-bar" id="quickBar">
+    <div class="quick-bar-inner" id="exampleButtons"></div>
+  </div>
+
+  <!-- ═══════════════════ TOOLS SIDEBAR ═══════════════════ -->
+  <div class="sidebar-overlay" id="toolsOverlay"></div>
+  <aside class="sidebar" id="toolsPanel" aria-label="Tools" role="dialog" aria-modal="true">
+    <div class="sidebar-header">
+      <span class="sidebar-title">🧰 Tools</span>
+      <button id="toolsCloseBtn" class="btn-icon-only" aria-label="Close">✕</button>
+    </div>
+
+    <div class="help-tabs">
+      <button class="help-tab active" data-tooltab="search" onclick="showToolsTab('search')">🔍 Search</button>
+      <button class="help-tab" data-tooltab="insights" onclick="showToolsTab('insights')">📊 Insights</button>
+      <button class="help-tab" data-tooltab="data" onclick="showToolsTab('data')">💾 Data</button>
+      <button class="help-tab" data-tooltab="learn" onclick="showToolsTab('learn')">📚 Learn</button>
+    </div>
+
+    <div class="sidebar-body">
+
+      <!-- 🔍 SEARCH TAB -->
+      <div class="tools-content active" id="toolsSearch">
+        <h4 class="tools-section">🔧 Filter Builder</h4>
+        <div class="gmail-filter-grid">
+          <label>From</label><input type="text" id="fbFrom" class="gmail-filter-input" placeholder="sender" />
+          <label>To</label><input type="text" id="fbTo" class="gmail-filter-input" placeholder="recipient" />
+          <label>Subject</label><input type="text" id="fbSubject" class="gmail-filter-input" placeholder="keyword" />
+          <label>Words</label><input type="text" id="fbWords" class="gmail-filter-input" placeholder="body text" />
+          <label>After</label><input type="date" id="fbAfter" class="gmail-filter-input" />
+          <label>Before</label><input type="date" id="fbBefore" class="gmail-filter-input" />
+          <label>Options</label>
+          <div class="gmail-filter-checks">
+            <label><input type="checkbox" id="fbUnread" /> Unread</label>
+            <label><input type="checkbox" id="fbStarred" /> Starred</label>
+            <label><input type="checkbox" id="fbAttach" /> Files</label>
+          </div>
+        </div>
+        <div class="gmail-filter-preview"><code id="fbPreview"></code></div>
+        <div class="gmail-filter-actions">
+          <button class="btn-sm" onclick="fbRun()" style="background:var(--accent);color:#fff;flex:1">🔍 Search</button>
+          <button class="btn-sm" onclick="fbClear()">🧹</button>
+        </div>
+
+        <h4 class="tools-section">📅 Date Range</h4>
+        <div class="gmail-date-grid">
+          <div class="gmail-date-field"><label>From</label><input type="date" id="drFrom" class="gmail-filter-input" /></div>
+          <div class="gmail-date-field"><label>To</label><input type="date" id="drTo" class="gmail-filter-input" /></div>
+          <div class="gmail-date-field"><label>Sender</label><input type="text" id="drSender" class="gmail-filter-input" placeholder="optional" /></div>
+        </div>
+        <div class="gmail-date-presets">
+          <button class="btn-sm" onclick="drPreset('today')">Today</button>
+          <button class="btn-sm" onclick="drPreset('week')">Week</button>
+          <button class="btn-sm" onclick="drPreset('month')">Month</button>
+          <button class="btn-sm" onclick="drPreset('3months')">3M</button>
+          <button class="btn-sm" onclick="drPreset('year')">Year</button>
+        </div>
+        <button class="btn-sm" onclick="drSearch()" style="background:var(--accent);color:#fff;margin-top:6px;width:100%">🔍 Search</button>
+
+        <h4 class="tools-section">🕐 Search History</h4>
+        <div class="gmail-history-tabs">
+          <button class="gmail-htab active" onclick="showHistoryTab('recent')">🕐 Recent</button>
+          <button class="gmail-htab" onclick="showHistoryTab('saved')">⭐ Saved</button>
+        </div>
+        <div id="historyRecent" class="gmail-history-list"></div>
+        <div id="historySaved" class="gmail-history-list" style="display:none"></div>
+      </div>
+
+      <!-- 📊 INSIGHTS TAB -->
+      <div class="tools-content" id="toolsInsights">
+        <h4 class="tools-section">📊 Stats Dashboard</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailBuildStats()" id="buildStatsBtn" disabled>📊 Analyze Inbox</button>
+          <span class="gmail-stats-status" id="statsStatus"></span>
+        </div>
+        <div id="statsDashboard" class="gmail-stats-dashboard"></div>
+
+        <h4 class="tools-section">☁️ Word Cloud</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailBuildWordCloud()" id="wordCloudBtn" disabled>☁️ Generate</button>
+          <span id="wordCloudStatus" class="gmail-stats-status"></span>
+        </div>
+        <div id="wordCloudContainer" class="gmail-wordcloud"></div>
+
+        <h4 class="tools-section">📰 Email Digest</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailBuildDigest('day')" id="digestDayBtn" disabled>Today</button>
+          <button class="btn-sm" onclick="gmailBuildDigest('week')" id="digestWeekBtn" disabled>Week</button>
+          <button class="btn-sm" onclick="gmailBuildDigest('month')" id="digestMonthBtn" disabled>Month</button>
+        </div>
+        <div id="digestContainer" class="gmail-digest"></div>
+
+        <h4 class="tools-section">📦 Email Size</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailAnalyzeSize()" id="sizeBtn" disabled>📦 Analyze</button>
+          <span id="sizeStatus" class="gmail-stats-status"></span>
+        </div>
+        <div id="sizeContainer" class="gmail-stats-dashboard"></div>
+
+        <h4 class="tools-section">🏆 Inbox Score</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailCalcInboxScore()" id="scoreBtn" disabled>🏆 Calculate</button>
+        </div>
+        <div id="scoreContainer"></div>
+      </div>
+
+      <!-- 💾 DATA TAB -->
+      <div class="tools-content" id="toolsData">
+        <h4 class="tools-section">💾 Export All Inbox</h4>
+        <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px">
+          <button class="btn-sm" onclick="gmailExportAllInbox('csv')" id="exportAllCsvBtn" disabled>CSV</button>
+          <button class="btn-sm" onclick="gmailExportAllInbox('json')" id="exportAllJsonBtn" disabled>JSON</button>
+          <button class="btn-sm" onclick="gmailExportAllInbox('txt')" id="exportAllTxtBtn" disabled>TXT</button>
+        </div>
+        <div id="exportAllProgress" class="gmail-export-progress" style="display:none;margin-top:8px">
+          <div class="gmail-export-bar"><div class="gmail-export-fill" id="exportAllFill"></div></div>
+          <span id="exportAllText">0 / ?</span>
+        </div>
+        <div id="exportAllInfo" style="font-size:0.75rem;opacity:0.5;margin-top:4px"></div>
+        <a href="https://takeout.google.com/settings/takeout/custom/gmail" target="_blank" rel="noopener" class="gmail-takeout-link" style="margin-top:8px">
+          <span>📦 Google Takeout — Full Backup</span>
+        </a>
+
+        <h4 class="tools-section">👥 Contact Book</h4>
+        <div class="gmail-contacts-bar">
+          <button class="btn-sm" onclick="gmailExtractContacts()" id="extractContactsBtn" disabled>🔍 Extract</button>
+          <button class="btn-sm" onclick="gmailExportContacts('csv')" id="exportContactsCsvBtn" disabled>CSV</button>
+          <button class="btn-sm" onclick="gmailExportContacts('json')" id="exportContactsJsonBtn" disabled>JSON</button>
+          <span class="gmail-contact-count" id="contactCount">0</span>
+        </div>
+        <input type="text" class="gmail-search-input" id="contactFilter" placeholder="Filter..." oninput="filterContacts()" style="margin-top:6px" />
+        <div id="contactsList" class="gmail-contacts-list"></div>
+
+        <h4 class="tools-section">📎 Attachments</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="gmailScanAttachments()" id="scanAttachBtn" disabled>📎 Scan</button>
+          <select id="attachSort" class="gmail-filter-input" style="width:auto" onchange="renderAttachments()">
+            <option value="date">Date</option><option value="size">Size</option><option value="name">Name</option><option value="sender">Sender</option>
+          </select>
+          <button class="btn-sm" onclick="exportAttachmentList()" id="exportAttachBtn" disabled>💾</button>
+          <span id="attachStatus" class="gmail-stats-status"></span>
+        </div>
+        <input type="text" class="gmail-search-input" id="attachFilter" placeholder="Filter..." oninput="renderAttachments()" style="margin-top:4px" />
+        <div id="attachList" class="gmail-contacts-list" style="max-height:400px"></div>
+
+        <h4 class="tools-section">📋 Bulk Copy</h4>
+        <div class="gmail-stats-bar">
+          <button class="btn-sm" onclick="bulkCopy('subjects')">Subjects</button>
+          <button class="btn-sm" onclick="bulkCopy('senders')">Senders</button>
+          <button class="btn-sm" onclick="bulkCopy('snippets')">Snippets</button>
+          <button class="btn-sm" onclick="bulkCopy('all')">All</button>
+        </div>
+        <p id="bulkInfo" style="font-size:0.72rem;opacity:0.4;margin-top:4px"></p>
+      </div>
+
+      <!-- 📚 LEARN TAB -->
+      <div class="tools-content" id="toolsLearn">
+        <h4 class="tools-section">🧠 Gmail Search Quiz</h4>
+        <div id="gmailQuizContainer"></div>
+        <div id="gmailQuizResult" class="gmail-quiz-result" style="display:none"></div>
+        <button class="btn-sm" onclick="resetGmailQuiz()" style="margin-top:8px">🔄 Try Again</button>
+
+        <h4 class="tools-section">⌨️ Shortcuts Trainer</h4>
+        <div id="shortcutChallenge" class="gmail-shortcut-challenge"></div>
+        <div class="gmail-stats-bar" style="margin-top:6px">
+          <button class="btn-sm" onclick="nextShortcutChallenge()">⏭️ Next</button>
+          <span id="shortcutScore" class="gmail-stats-status"></span>
+        </div>
+
+        <h4 class="tools-section">📋 Cheat Sheet</h4>
+        <div class="gmail-cheat-grid">
+          <code>from:</code><span>Emails from someone</span>
+          <code>to:</code><span>Emails you sent to someone</span>
+          <code>subject:</code><span>Search by subject</span>
+          <code>is:unread</code><span>Unread only</span>
+          <code>is:starred</code><span>Starred only</span>
+          <code>has:attachment</code><span>With files</span>
+          <code>after:/before:</code><span>Date range</span>
+          <code>newer_than:7d</code><span>Last 7 days</span>
+          <code>label:</code><span>By label</span>
+          <code>filename:pdf</code><span>By file type</span>
+        </div>
+
+        <h4 class="tools-section">📝 Email Templates</h4>
+        <div class="gmail-tpl-tabs" id="tplTabs"></div>
+        <div id="tplContainer" class="gmail-tpl-list"></div>
+        <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+          <input type="text" id="tplName" class="gmail-filter-input" placeholder="Template name" style="margin-bottom:4px;width:100%" />
+          <textarea id="tplBody" class="gmail-filter-input" placeholder="Template text..." rows="2" style="width:100%;resize:vertical"></textarea>
+          <button class="btn-sm" onclick="addCustomTemplate()" style="margin-top:4px">➕ Save</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="sidebar-footer">
+      <span>Gmail Lab</span>
+      <span class="badge"><strong>v2.0</strong></span>
+    </div>
+  </aside>
 
     <!-- ═══════════════════ FOOTER ═══════════════════ -->
     <footer class="app-footer">

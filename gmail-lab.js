@@ -2262,6 +2262,39 @@ async function gmailExportAllInbox(format) {
   if (fillEl) fillEl.style.width = '0%';
 }
 
+/* ═══════ TOOLS PANEL ═══════ */
+
+function openTools() {
+  const sb = document.getElementById('toolsPanel');
+  const ov = document.getElementById('toolsOverlay');
+  if (sb) sb.classList.add('open');
+  if (ov) ov.classList.add('open');
+  playSound('click');
+}
+
+function closeTools() {
+  const sb = document.getElementById('toolsPanel');
+  const ov = document.getElementById('toolsOverlay');
+  if (sb) sb.classList.remove('open');
+  if (ov) ov.classList.remove('open');
+}
+
+function showToolsTab(tab) {
+  document.querySelectorAll('[data-tooltab]').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tools-content').forEach(c => c.classList.remove('active'));
+  const btn = document.querySelector(`[data-tooltab="${tab}"]`);
+  const content = document.getElementById('tools' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (btn) btn.classList.add('active');
+  if (content) content.classList.add('active');
+}
+
+// Show setup guide only on first visit (no client ID)
+function checkFirstVisit() {
+  const clientId = localStorage.getItem('gmail-lab-client-id');
+  const guide = document.getElementById('setupGuide');
+  if (guide) guide.style.display = clientId ? 'none' : 'block';
+}
+
 /* ═══════ OFFLINE HANDLING ═══════ */
 
 function gmailCheckOnline() {
@@ -2299,6 +2332,14 @@ renderTemplates();
 showRandomTip();
 shuffleShortcuts();
 nextShortcutChallenge();
+checkFirstVisit();
+
+// Tools panel
+const toolsCloseBtn = document.getElementById('toolsCloseBtn');
+const toolsOverlay = document.getElementById('toolsOverlay');
+if (toolsCloseBtn) toolsCloseBtn.onclick = closeTools;
+if (toolsOverlay) toolsOverlay.onclick = closeTools;
+
 gmailRenderAuth();
 if (gmailCheckOnline()) {
   log('📧 Gmail Lab ready — connect your Google account!', 'success');

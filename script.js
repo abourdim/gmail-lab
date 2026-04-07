@@ -1296,6 +1296,7 @@ function closeAllPanels() {
   closeHelp();
   closeSettings();
   closeLog();
+  if (typeof closeTools === 'function') closeTools();
 }
 
 function initHelpTabs() {
