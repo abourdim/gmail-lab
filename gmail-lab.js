@@ -345,7 +345,8 @@ async function gmailSearch(query, maxResults, pageToken) {
   const r = await gapi.client.gmail.users.messages.list(listParams);
   const messages = r.result.messages || [];
   const nextPageToken = r.result.nextPageToken || null;
-  log('📥 Found ' + messages.length + ' messages', 'rx');
+  const totalEstimate = r.result.resultSizeEstimate || 0;
+  log('📥 Found ~' + totalEstimate + ' matching emails, showing ' + messages.length, 'rx');
 
   const detailed = [];
   for (const m of messages) {
@@ -362,7 +363,7 @@ async function gmailSearch(query, maxResults, pageToken) {
       unread: (d.result.labelIds || []).includes('UNREAD')
     });
   }
-  return { emails: detailed, nextPageToken };
+  return { emails: detailed, nextPageToken, totalEstimate };
 }
 
 async function gmailReadMessage(messageId) {
@@ -424,11 +425,14 @@ function gmailShowError(msg) {
 
 let gmailTotalLoaded = 0;
 
-function gmailShowEmailList(title, emails, query, nextPageToken) {
+let gmailTotalFound = 0;
+
+function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) {
   const container = document.getElementById('resultsContainer');
   gmailTotalLoaded = emails.length;
+  gmailTotalFound = totalEstimate || emails.length;
   const unreadCount = emails.filter(e => e.unread).length;
-  const statsText = `${emails.length} result${emails.length !== 1 ? 's' : ''}${unreadCount ? ` · ${unreadCount} unread` : ''}`;
+  const statsText = `~${gmailTotalFound} found · showing ${gmailTotalLoaded}${unreadCount ? ` · ${unreadCount} unread` : ''}`;
 
   let html = `<div class="gmail-results">
     <div class="gmail-results-header">
@@ -483,9 +487,10 @@ async function gmailLoadMore(query, pageToken) {
       }
     }
     gmailTotalLoaded += result.emails.length;
+    if (result.totalEstimate) gmailTotalFound = result.totalEstimate;
     const statsEl = document.getElementById('resultsStats');
-    if (statsEl) statsEl.textContent = `${gmailTotalLoaded} results loaded`;
-    log(`📊 +${result.emails.length} loaded (${gmailTotalLoaded} total)`, 'info');
+    if (statsEl) statsEl.textContent = `~${gmailTotalFound} found · showing ${gmailTotalLoaded}`;
+    log(`📊 showing ${gmailTotalLoaded} of ~${gmailTotalFound}`, 'info');
     playSound('success');
   } catch (e) {
     log('❌ ' + (e.message || 'Load more failed'), 'error');
@@ -546,7 +551,7 @@ async function gmailRunSearch(query, title, max) {
   gmailShowLoading(title);
   try {
     const result = await gmailSearch(query, max || 8);
-    gmailShowEmailList(title, result.emails, query, result.nextPageToken);
+    gmailShowEmailList(title, result.emails, query, result.nextPageToken, result.totalEstimate);
     playSound('success');
   } catch (e) {
     gmailShowError(e.message || 'Search failed');
