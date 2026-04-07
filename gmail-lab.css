@@ -479,6 +479,12 @@
 /* ═══ DIGEST ═══ */
 .gmail-digest { margin-top: 8px; }
 
+/* ═══ HEADER VERSION ═══ */
+.header-version {
+  font-size: 0.55rem; opacity: 0.3; font-weight: 400;
+  vertical-align: middle; margin-inline-start: 4px;
+}
+
 /* ═══ REGEX HINT ═══ */
 .gmail-regex-hint {
   font-size: 0.65rem; color: var(--text-muted); opacity: 0.5;
