@@ -307,10 +307,12 @@
         <div id="mboxInfo" style="font-size:0.72rem;opacity:0.4;margin-top:4px"></div>
         <div id="mboxSearchBar" style="display:none;margin-top:8px">
           <div class="gmail-search-row">
-            <input class="gmail-search-input" id="mboxSearch" placeholder="Search loaded emails..." onkeydown="if(event.key==='Enter')mboxRunSearch()" />
+            <input class="gmail-search-input" id="mboxSearch" placeholder="Search... keywords, comma-separated, or /regex/" onkeydown="if(event.key==='Enter')mboxRunSearch()" />
             <button class="gmail-search-btn" onclick="mboxRunSearch()">🔍</button>
           </div>
           <div class="gmail-stats-bar" style="margin-top:6px;flex-wrap:wrap;gap:4px">
+            <label class="toggle-ctrl" style="font-size:0.75rem"><input type="checkbox" id="mboxRegex" class="checkbox-ctrl" /> <span>Regex</span></label>
+            <label class="toggle-ctrl" style="font-size:0.75rem"><input type="checkbox" id="mboxCaseSensitive" class="checkbox-ctrl" /> <span>Case sensitive</span></label>
             <button class="btn-sm" onclick="mboxShowAll()">All</button>
             <button class="btn-sm" onclick="mboxExport('csv')">💾 CSV</button>
             <button class="btn-sm" onclick="mboxExport('json')">💾 JSON</button>

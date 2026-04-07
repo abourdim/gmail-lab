@@ -2949,20 +2949,50 @@ function parseMbox(text) {
 }
 
 function mboxRunSearch() {
-  const query = (document.getElementById('mboxSearch')?.value || '').trim().toLowerCase();
-  if (!query) { mboxShowAll(); return; }
+  const raw = (document.getElementById('mboxSearch')?.value || '').trim();
+  if (!raw) { mboxShowAll(); return; }
 
-  // Support comma-separated multi-search
-  const terms = query.includes(',') ? query.split(',').map(t => t.trim()).filter(Boolean) : [query];
+  const useRegex = document.getElementById('mboxRegex')?.checked;
+  const caseSensitive = document.getElementById('mboxCaseSensitive')?.checked;
+  const query = caseSensitive ? raw : raw.toLowerCase();
 
-  mboxFiltered = mboxEmails.filter(e => {
-    const haystack = `${e.from} ${e.to} ${e.subject} ${e.snippet} ${e.labels}`.toLowerCase();
-    return terms.some(term => haystack.includes(term));
-  });
+  if (useRegex) {
+    // Regex mode: also support /pattern/flags syntax
+    let regex;
+    try {
+      const regexMatch = raw.match(/^\/(.+)\/([gimsuy]*)$/);
+      if (regexMatch) {
+        regex = new RegExp(regexMatch[1], regexMatch[2]);
+      } else {
+        regex = new RegExp(raw, caseSensitive ? '' : 'i');
+      }
+    } catch (e) {
+      showToast('Invalid regex: ' + e.message, 3000);
+      log(`❌ Invalid regex: ${e.message}`, 'error');
+      return;
+    }
 
+    mboxFiltered = mboxEmails.filter(e => {
+      const haystack = `${e.from} ${e.to} ${e.subject} ${e.snippet} ${e.labels} ${e.body}`;
+      return regex.test(haystack);
+    });
+    log(`📦 MBOX regex /${raw}/: ${mboxFiltered.length} results`, 'info');
+  } else {
+    // Keyword mode: comma-separated multi-search
+    const terms = query.includes(',') ? query.split(',').map(t => t.trim()).filter(Boolean) : [query];
+
+    mboxFiltered = mboxEmails.filter(e => {
+      const haystack = caseSensitive
+        ? `${e.from} ${e.to} ${e.subject} ${e.snippet} ${e.labels}`
+        : `${e.from} ${e.to} ${e.subject} ${e.snippet} ${e.labels}`.toLowerCase();
+      return terms.some(term => haystack.includes(term));
+    });
+    log(`📦 MBOX search "${query}": ${mboxFiltered.length} results`, 'info');
+  }
+
+  mboxDisplayed = 100;
   mboxRenderList(mboxFiltered.slice(0, 100));
   mboxUpdateCount(mboxFiltered.length);
-  log(`📦 MBOX search "${query}": ${mboxFiltered.length} results`, 'info');
 }
 
 function mboxShowAll() {
