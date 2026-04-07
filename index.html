@@ -256,6 +256,104 @@
         <button class="gmail-tip-close" onclick="closeTip()">✕</button>
       </div>
 
+      <!-- ═══════════════════ ATTACHMENT MANAGER ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">📎</span> <span>Attachment Manager</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div class="gmail-stats-bar">
+            <button class="btn-sm" onclick="gmailScanAttachments()" id="scanAttachBtn" disabled>📎 Scan Attachments</button>
+            <select id="attachSort" class="gmail-filter-input" style="width:auto" onchange="renderAttachments()">
+              <option value="date">By date</option>
+              <option value="size">By size</option>
+              <option value="name">By name</option>
+              <option value="sender">By sender</option>
+            </select>
+            <button class="btn-sm" onclick="exportAttachmentList()" id="exportAttachBtn" disabled>💾 Export</button>
+            <span id="attachStatus" class="gmail-stats-status"></span>
+          </div>
+          <div class="gmail-contacts-filter">
+            <input type="text" class="gmail-search-input" id="attachFilter" placeholder="Filter by name, type, sender..." oninput="renderAttachments()" style="margin-top:4px" />
+          </div>
+          <div id="attachList" class="gmail-contacts-list" style="max-height:500px"></div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ WORD CLOUD ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">☁️</span> <span>Word Cloud</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div class="gmail-stats-bar">
+            <button class="btn-sm" onclick="gmailBuildWordCloud()" id="wordCloudBtn" disabled>☁️ Generate</button>
+            <span id="wordCloudStatus" class="gmail-stats-status"></span>
+          </div>
+          <div id="wordCloudContainer" class="gmail-wordcloud"></div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ EMAIL DIGEST ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">📰</span> <span>Email Digest</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div class="gmail-stats-bar">
+            <button class="btn-sm" onclick="gmailBuildDigest('day')" id="digestDayBtn" disabled>📰 Today</button>
+            <button class="btn-sm" onclick="gmailBuildDigest('week')" id="digestWeekBtn" disabled>📰 This Week</button>
+            <button class="btn-sm" onclick="gmailBuildDigest('month')" id="digestMonthBtn" disabled>📰 This Month</button>
+          </div>
+          <div id="digestContainer" class="gmail-digest"></div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ BULK CLIPBOARD ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">📋</span> <span>Bulk Clipboard</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Select emails from results, then bulk copy</p>
+          <div class="gmail-stats-bar">
+            <button class="btn-sm" onclick="bulkCopy('subjects')">📋 Subjects</button>
+            <button class="btn-sm" onclick="bulkCopy('senders')">📋 Senders</button>
+            <button class="btn-sm" onclick="bulkCopy('snippets')">📋 Snippets</button>
+            <button class="btn-sm" onclick="bulkCopy('all')">📋 All</button>
+          </div>
+          <p id="bulkInfo" style="font-size:0.75rem;opacity:0.4;margin-top:6px"></p>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ EMAIL SIZE ANALYZER ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">📦</span> <span>Email Size Analyzer</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div class="gmail-stats-bar">
+            <button class="btn-sm" onclick="gmailAnalyzeSize()" id="sizeBtn" disabled>📦 Analyze</button>
+            <span id="sizeStatus" class="gmail-stats-status"></span>
+          </div>
+          <div id="sizeContainer" class="gmail-stats-dashboard"></div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ INBOX SCORE ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">🏆</span> <span>Inbox Score</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div class="gmail-stats-bar">
+            <button class="btn-sm" onclick="gmailCalcInboxScore()" id="scoreBtn" disabled>🏆 Calculate</button>
+          </div>
+          <div id="scoreContainer"></div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ SHORTCUTS TRAINER ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">⌨️</span> <span>Gmail Shortcuts Trainer</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <p style="font-size:0.82rem;opacity:0.5;margin-bottom:8px">Practice Gmail keyboard shortcuts!</p>
+          <div id="shortcutChallenge" class="gmail-shortcut-challenge"></div>
+          <div class="gmail-stats-bar" style="margin-top:8px">
+            <button class="btn-sm" onclick="nextShortcutChallenge()">⏭️ Next</button>
+            <span id="shortcutScore" class="gmail-stats-status"></span>
+          </div>
+        </div>
+      </details>
+
       <!-- ═══════════════════ CHEAT SHEET ═══════════════════ -->
       <details class="collapsible">
         <summary><span class="icon">📋</span> <span data-i18n="sectionC">Gmail Search Cheat Sheet</span></summary>

@@ -453,6 +453,32 @@
 }
 .gmail-tip-next:hover, .gmail-tip-close:hover { color: var(--accent); }
 
+/* ═══ WORD CLOUD ═══ */
+.gmail-wordcloud {
+  display: flex; flex-wrap: wrap; gap: 6px 10px;
+  justify-content: center; align-items: center;
+  padding: 16px 8px; min-height: 60px;
+}
+.wc-word {
+  cursor: pointer; transition: transform .15s, opacity .15s;
+  font-family: var(--font-h);
+}
+.wc-word:hover { transform: scale(1.2); opacity: 1 !important; }
+
+/* ═══ SHORTCUTS TRAINER ═══ */
+.sc-question {
+  font-size: 1rem; text-align: center; padding: 12px; margin-bottom: 10px;
+}
+.sc-question kbd {
+  display: inline-block; padding: 4px 12px; border-radius: 6px;
+  background: var(--accent); color: #fff; font-size: 1.1rem;
+  font-family: var(--font-h); margin: 0 4px;
+}
+.sc-options { display: flex; flex-direction: column; gap: 6px; }
+
+/* ═══ DIGEST ═══ */
+.gmail-digest { margin-top: 8px; }
+
 /* ═══ MODAL ═══ */
 .gmail-modal-overlay {
   position: fixed; inset: 0; z-index: 10000;

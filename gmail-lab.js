@@ -91,6 +91,10 @@ function gmailEnableButtons(enabled) {
   if (cs) cs.disabled = !enabled;
   if (ec) ec.disabled = !enabled;
   if (sb) sb.disabled = !enabled;
+  ['scanAttachBtn','exportAttachBtn','wordCloudBtn','digestDayBtn','digestWeekBtn','digestMonthBtn','sizeBtn','scoreBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !enabled;
+  });
 }
 
 function gmailEscHtml(s) {
@@ -1666,6 +1670,409 @@ function closeTip() {
   if (banner) banner.style.display = 'none';
 }
 
+/* ═══════ ATTACHMENT MANAGER ═══════ */
+
+let attachmentData = [];
+
+async function gmailScanAttachments() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const btn = document.getElementById('scanAttachBtn');
+  const status = document.getElementById('attachStatus');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Scanning…';
+  attachmentData = [];
+  let pageToken = null, total = 0;
+  try {
+    do {
+      const p = { userId: 'me', q: 'has:attachment', maxResults: 100 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+      for (const m of msgs) {
+        try {
+          const d = await gapi.client.gmail.users.messages.get({ userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date'] });
+          const h = d.result.payload.headers;
+          const get = n => (h.find(x => x.name === n) || {}).value || '';
+          const parts = d.result.payload.parts || [];
+          parts.forEach(part => {
+            if (part.filename && part.filename.length > 0) {
+              attachmentData.push({ name: part.filename, size: part.body?.size || 0, type: part.mimeType || '', from: get('From'), subject: get('Subject'), date: get('Date'), msgId: m.id });
+            }
+          });
+        } catch {}
+      }
+      total += msgs.length;
+      if (status) status.textContent = `${total} emails scanned, ${attachmentData.length} attachments found…`;
+      if (total >= 300) break;
+      await new Promise(r => setTimeout(r, 200));
+    } while (pageToken);
+    log(`📎 Found ${attachmentData.length} attachments in ${total} emails`, 'success');
+    playSound('success');
+    renderAttachments();
+    const eb = document.getElementById('exportAttachBtn');
+    if (eb) eb.disabled = false;
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
+  if (btn) btn.disabled = false;
+  if (status) status.textContent = '';
+}
+
+function renderAttachments() {
+  const container = document.getElementById('attachList');
+  if (!container) return;
+  let list = attachmentData.slice();
+  const filter = (document.getElementById('attachFilter')?.value || '').toLowerCase();
+  if (filter) list = list.filter(a => a.name.toLowerCase().includes(filter) || a.from.toLowerCase().includes(filter) || a.type.toLowerCase().includes(filter));
+  const sort = document.getElementById('attachSort')?.value || 'date';
+  if (sort === 'size') list.sort((a, b) => b.size - a.size);
+  else if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
+  else if (sort === 'sender') list.sort((a, b) => a.from.localeCompare(b.from));
+  if (!list.length) { container.innerHTML = '<p style="text-align:center;opacity:0.4;padding:12px">No attachments</p>'; return; }
+  container.innerHTML = list.slice(0, 200).map(a => {
+    const ext = a.name.split('.').pop().toLowerCase();
+    const icon = { pdf: '📄', doc: '📝', docx: '📝', xls: '📊', xlsx: '📊', ppt: '📽️', pptx: '📽️', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', zip: '📦', rar: '📦', mp3: '🎵', mp4: '🎬', csv: '📊' }[ext] || '📎';
+    const sz = a.size > 1048576 ? (a.size / 1048576).toFixed(1) + ' MB' : a.size > 1024 ? Math.round(a.size / 1024) + ' KB' : a.size + ' B';
+    const sender = a.from.replace(/<.*>/, '').trim();
+    return `<div class="gmail-contact-item"><span style="font-size:1.3rem">${icon}</span><div class="gmail-contact-info"><span class="gmail-contact-name">${gmailEscHtml(a.name)}</span><span class="gmail-contact-email">${gmailEscHtml(sender)} · ${sz} · ${gmailFormatDate(a.date)}</span></div><button class="gmail-contact-search" onclick="gmailHandleRead('${a.msgId}')" title="Open email">📖</button></div>`;
+  }).join('');
+}
+
+function exportAttachmentList() {
+  if (!attachmentData.length) return;
+  const csv = 'Filename,Type,Size,From,Subject,Date\n' + attachmentData.map(a => `"${a.name}","${a.type}","${a.size}","${a.from.replace(/"/g, '')}","${(a.subject || '').replace(/"/g, '')}","${a.date}"`).join('\n');
+  downloadFile(csv, `gmail-attachments-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
+}
+
+/* ═══════ WORD CLOUD ═══════ */
+
+async function gmailBuildWordCloud() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const btn = document.getElementById('wordCloudBtn');
+  const status = document.getElementById('wordCloudStatus');
+  const container = document.getElementById('wordCloudContainer');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Scanning subjects…';
+  const wordMap = {};
+  const stopWords = new Set(['re','fwd','the','a','an','and','or','is','in','to','for','of','on','at','by','with','from','your','you','this','that','it','we','our','my','me','i','de','le','la','les','du','des','un','une','et','en','au','à','ce','qui','que','ne','pas','est','pour','sur','se','son','sa','il','elle','nous','je','avec','dans','par','sont','au','aux','mais','ou','donc','ni','car']);
+  let pageToken = null, total = 0;
+  try {
+    do {
+      const p = { userId: 'me', maxResults: 200 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+      for (const m of msgs) {
+        try {
+          const d = await gapi.client.gmail.users.messages.get({ userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['Subject'] });
+          const subj = ((d.result.payload.headers.find(h => h.name === 'Subject') || {}).value || '').toLowerCase();
+          subj.split(/[\s\-_:,;.!?()[\]{}"'\/\\]+/).forEach(w => {
+            w = w.trim();
+            if (w.length > 2 && !stopWords.has(w) && !/^\d+$/.test(w)) wordMap[w] = (wordMap[w] || 0) + 1;
+          });
+        } catch {}
+      }
+      total += msgs.length;
+      if (status) status.textContent = `${total} subjects scanned…`;
+      if (total >= 500) break;
+      await new Promise(r => setTimeout(r, 200));
+    } while (pageToken);
+    const words = Object.entries(wordMap).sort((a, b) => b[1] - a[1]).slice(0, 80);
+    const maxC = words[0]?.[1] || 1;
+    if (container) {
+      container.innerHTML = words.map(([w, c]) => {
+        const size = 0.6 + (c / maxC) * 2;
+        const opacity = 0.4 + (c / maxC) * 0.6;
+        const hue = Math.floor(Math.random() * 360);
+        return `<span class="wc-word" style="font-size:${size}rem;opacity:${opacity};color:hsl(${hue},70%,65%)" onclick="gmailRunSearch('subject:${w}','Subject: ${w}')" title="${c} emails">${gmailEscHtml(w)}</span>`;
+      }).join(' ');
+    }
+    log(`☁️ Word cloud: ${words.length} words from ${total} emails`, 'success');
+    playSound('success');
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
+  if (btn) btn.disabled = false;
+  if (status) status.textContent = '';
+}
+
+/* ═══════ EMAIL DIGEST ═══════ */
+
+async function gmailBuildDigest(period) {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const container = document.getElementById('digestContainer');
+  if (!container) return;
+  const now = new Date();
+  const d = new Date(now);
+  if (period === 'day') d.setHours(0, 0, 0, 0);
+  else if (period === 'week') d.setDate(d.getDate() - 7);
+  else d.setMonth(d.getMonth() - 1);
+  const q = `after:${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+  container.innerHTML = '<p style="text-align:center;opacity:0.5">Generating digest…</p>';
+  try {
+    const senderMap = {};
+    let totalEmails = 0, unread = 0, starred = 0, withAttach = 0;
+    let pageToken = null;
+    do {
+      const p = { userId: 'me', q, maxResults: 250 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+      for (const m of msgs) {
+        try {
+          const det = await gapi.client.gmail.users.messages.get({ userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['From', 'Subject'] });
+          const from = ((det.result.payload.headers.find(h => h.name === 'From') || {}).value || '').replace(/<.*>/, '').trim();
+          const labels = det.result.labelIds || [];
+          if (from) senderMap[from] = (senderMap[from] || 0) + 1;
+          if (labels.includes('UNREAD')) unread++;
+          if (labels.includes('STARRED')) starred++;
+          totalEmails++;
+        } catch {}
+      }
+      if (totalEmails >= 500) break;
+      await new Promise(r => setTimeout(r, 200));
+    } while (pageToken);
+    const topSenders = Object.entries(senderMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const periodLabel = { day: 'Today', week: 'This Week', month: 'This Month' }[period];
+    container.innerHTML = `
+      <div class="gmail-digest-summary">
+        <h4>📰 ${periodLabel}'s Digest</h4>
+        <div class="stats-overview" style="margin:10px 0">
+          <div class="stats-card"><span class="stats-num">${totalEmails}</span><span class="stats-label">Total</span></div>
+          <div class="stats-card"><span class="stats-num">${unread}</span><span class="stats-label">Unread</span></div>
+          <div class="stats-card"><span class="stats-num">${starred}</span><span class="stats-label">Starred</span></div>
+          <div class="stats-card"><span class="stats-num">${Object.keys(senderMap).length}</span><span class="stats-label">Senders</span></div>
+        </div>
+        <h4 class="stats-section-title">🏆 Top Senders</h4>
+        ${topSenders.map(([name, count]) => `<div class="gmail-contact-item" style="padding:6px 10px"><span class="gmail-contact-name" style="flex:1">${gmailEscHtml(name)}</span><span class="gmail-contact-count">${count}</span></div>`).join('')}
+      </div>`;
+    log(`📰 Digest (${periodLabel}): ${totalEmails} emails, ${unread} unread`, 'success');
+    playSound('success');
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); container.innerHTML = ''; }
+}
+
+/* ═══════ BULK CLIPBOARD ═══════ */
+
+async function bulkCopy(type) {
+  if (!gmailLoadedEmails.length) { showToast('Search first, then bulk copy', 2000); return; }
+  let text = '';
+  const emails = gmailLoadedEmails;
+  if (type === 'subjects') text = emails.map(e => e.subject || '').join('\n');
+  else if (type === 'senders') text = [...new Set(emails.map(e => e.from || ''))].join('\n');
+  else if (type === 'snippets') text = emails.map(e => `${e.subject}: ${e.snippet || ''}`).join('\n\n');
+  else text = emails.map(e => `From: ${e.from}\nSubject: ${e.subject}\nDate: ${e.date}\n${e.snippet || ''}\n---`).join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(`Copied ${emails.length} emails (${type})`, 1500);
+    playSound('success');
+    const info = document.getElementById('bulkInfo');
+    if (info) info.textContent = `✓ ${emails.length} items copied as ${type}`;
+  } catch { showToast('Copy failed', 1500); }
+}
+
+/* ═══════ EMAIL SIZE ANALYZER ═══════ */
+
+async function gmailAnalyzeSize() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const btn = document.getElementById('sizeBtn');
+  const status = document.getElementById('sizeStatus');
+  const container = document.getElementById('sizeContainer');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Analyzing…';
+  const sizeBuckets = { '< 100 KB': 0, '100 KB - 1 MB': 0, '1 - 5 MB': 0, '5 - 10 MB': 0, '> 10 MB': 0 };
+  const bigEmails = [];
+  let totalSize = 0, totalCount = 0, pageToken = null;
+  try {
+    do {
+      const p = { userId: 'me', maxResults: 200 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+      for (const m of msgs) {
+        try {
+          const d = await gapi.client.gmail.users.messages.get({ userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date'] });
+          const sz = d.result.sizeEstimate || 0;
+          totalSize += sz;
+          totalCount++;
+          const h = d.result.payload.headers;
+          const get = n => (h.find(x => x.name === n) || {}).value || '';
+          if (sz < 102400) sizeBuckets['< 100 KB']++;
+          else if (sz < 1048576) sizeBuckets['100 KB - 1 MB']++;
+          else if (sz < 5242880) sizeBuckets['1 - 5 MB']++;
+          else if (sz < 10485760) sizeBuckets['5 - 10 MB']++;
+          else sizeBuckets['> 10 MB']++;
+          if (sz > 1048576) bigEmails.push({ from: get('From'), subject: get('Subject'), date: get('Date'), size: sz });
+        } catch {}
+      }
+      if (status) status.textContent = `${totalCount} emails analyzed…`;
+      if (totalCount >= 500) break;
+      await new Promise(r => setTimeout(r, 200));
+    } while (pageToken);
+    bigEmails.sort((a, b) => b.size - a.size);
+    const maxBucket = Math.max(...Object.values(sizeBuckets), 1);
+    const totalMB = (totalSize / 1048576).toFixed(1);
+    const avgKB = totalCount ? Math.round(totalSize / totalCount / 1024) : 0;
+    if (container) container.innerHTML = `
+      <div class="stats-overview" style="margin-bottom:12px">
+        <div class="stats-card"><span class="stats-num">${totalMB}</span><span class="stats-label">Total MB</span></div>
+        <div class="stats-card"><span class="stats-num">${avgKB}</span><span class="stats-label">Avg KB</span></div>
+        <div class="stats-card"><span class="stats-num">${totalCount}</span><span class="stats-label">Emails</span></div>
+        <div class="stats-card"><span class="stats-num">${bigEmails.length}</span><span class="stats-label">> 1 MB</span></div>
+      </div>
+      <h4 class="stats-section-title">📊 Size Distribution</h4>
+      <div class="stats-bars">${Object.entries(sizeBuckets).map(([label, count]) => `
+        <div class="stats-bar-row"><span class="stats-bar-label">${label}</span><div class="stats-bar-track"><div class="stats-bar-fill" style="width:${(count/maxBucket*100).toFixed(0)}%"></div></div><span class="stats-bar-val">${count}</span></div>`).join('')}
+      </div>
+      ${bigEmails.length ? `<h4 class="stats-section-title">🐘 Heaviest Emails</h4>${bigEmails.slice(0, 10).map(e => {
+        const sz = (e.size / 1048576).toFixed(1);
+        const sender = e.from.replace(/<.*>/, '').trim();
+        return `<div class="gmail-contact-item" style="padding:6px 10px"><div class="gmail-contact-info"><span class="gmail-contact-name">${gmailEscHtml(e.subject || '(no subject)')}</span><span class="gmail-contact-email">${gmailEscHtml(sender)} · ${gmailFormatDate(e.date)}</span></div><span style="font-weight:700;color:var(--accent)">${sz} MB</span></div>`;
+      }).join('')}` : ''}`;
+    log(`📦 Size: ${totalMB} MB total, avg ${avgKB} KB, ${bigEmails.length} large emails`, 'success');
+    playSound('success');
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
+  if (btn) btn.disabled = false;
+  if (status) status.textContent = '';
+}
+
+/* ═══════ INBOX SCORE ═══════ */
+
+async function gmailCalcInboxScore() {
+  if (!gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  const btn = document.getElementById('scoreBtn');
+  const container = document.getElementById('scoreContainer');
+  if (btn) btn.disabled = true;
+  if (container) container.innerHTML = '<p style="text-align:center;opacity:0.5">Calculating…</p>';
+  try {
+    const profile = await gapi.client.gmail.users.getProfile({ userId: 'me' });
+    const totalMsgs = profile.result.messagesTotal;
+    const totalThreads = profile.result.threadsTotal;
+    // Count unread
+    const unreadR = await gapi.client.gmail.users.messages.list({ userId: 'me', q: 'is:unread', maxResults: 1 });
+    const unreadEst = unreadR.result.resultSizeEstimate || 0;
+    // Count starred
+    const starR = await gapi.client.gmail.users.messages.list({ userId: 'me', q: 'is:starred', maxResults: 1 });
+    const starEst = starR.result.resultSizeEstimate || 0;
+    // Count labels
+    const labelsR = await gapi.client.gmail.users.labels.list({ userId: 'me' });
+    const userLabels = (labelsR.result.labels || []).filter(l => l.type === 'user').length;
+
+    // Scoring
+    const unreadRatio = totalMsgs > 0 ? unreadEst / totalMsgs : 0;
+    const threadRatio = totalMsgs > 0 ? totalThreads / totalMsgs : 0;
+    let score = 50;
+    // Low unread = good (+30 max)
+    score += Math.round((1 - Math.min(unreadRatio * 10, 1)) * 30);
+    // Has labels = organized (+10 max)
+    score += Math.min(userLabels * 2, 10);
+    // Uses stars = prioritizes (+5)
+    if (starEst > 0) score += 5;
+    // Good thread ratio = clean (+5)
+    if (threadRatio > 0.3) score += 5;
+    score = Math.min(100, Math.max(0, score));
+
+    const emoji = score >= 90 ? '🏆' : score >= 70 ? '🎉' : score >= 50 ? '👍' : score >= 30 ? '😐' : '😱';
+    const color = score >= 70 ? '#4ade80' : score >= 50 ? '#fbbf24' : '#ef4444';
+    const tips = [];
+    if (unreadEst > 50) tips.push('📬 Clear your unread emails — you have ~' + unreadEst);
+    if (userLabels < 3) tips.push('🏷️ Create more labels to organize your inbox');
+    if (starEst === 0) tips.push('⭐ Star important emails for quick access');
+
+    if (container) container.innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:4rem">${emoji}</div>
+        <div style="font-size:2.5rem;font-weight:800;color:${color};font-family:var(--font-h)">${score}/100</div>
+        <div style="font-size:0.85rem;opacity:0.6;margin-top:4px">Inbox Health Score</div>
+      </div>
+      <div class="stats-overview">
+        <div class="stats-card"><span class="stats-num">${Number(totalMsgs).toLocaleString()}</span><span class="stats-label">Emails</span></div>
+        <div class="stats-card"><span class="stats-num">~${unreadEst}</span><span class="stats-label">Unread</span></div>
+        <div class="stats-card"><span class="stats-num">${starEst}</span><span class="stats-label">Starred</span></div>
+        <div class="stats-card"><span class="stats-num">${userLabels}</span><span class="stats-label">Labels</span></div>
+      </div>
+      ${tips.length ? `<div style="margin-top:12px"><h4 class="stats-section-title">💡 Tips to Improve</h4>${tips.map(t => `<p style="font-size:0.82rem;padding:4px 0">${t}</p>`).join('')}</div>` : ''}`;
+    log(`🏆 Inbox Score: ${score}/100`, score >= 70 ? 'success' : 'info');
+    playSound('success');
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); if (container) container.innerHTML = ''; }
+  if (btn) btn.disabled = false;
+}
+
+/* ═══════ GMAIL SHORTCUTS TRAINER ═══════ */
+
+const GMAIL_SHORTCUTS = [
+  { key: 'c', action: 'Compose new email' },
+  { key: 'r', action: 'Reply to email' },
+  { key: 'a', action: 'Reply all' },
+  { key: 'f', action: 'Forward email' },
+  { key: 'e', action: 'Archive email' },
+  { key: '#', action: 'Delete / move to trash' },
+  { key: 'j', action: 'Move to next email' },
+  { key: 'k', action: 'Move to previous email' },
+  { key: 'o', action: 'Open email' },
+  { key: 'u', action: 'Go back to inbox' },
+  { key: 's', action: 'Star / unstar email' },
+  { key: '/', action: 'Focus search bar' },
+  { key: 'Shift+I', action: 'Mark as read' },
+  { key: 'Shift+U', action: 'Mark as unread' },
+  { key: '?', action: 'Show keyboard shortcuts help' },
+  { key: 'g then i', action: 'Go to inbox' },
+  { key: 'g then s', action: 'Go to starred' },
+  { key: 'g then t', action: 'Go to sent' },
+  { key: 'g then d', action: 'Go to drafts' },
+  { key: 'Ctrl+Enter', action: 'Send email' },
+];
+
+let scCurrentIdx = 0, scCorrect = 0, scTotal = 0, scOrder = [];
+
+function shuffleShortcuts() {
+  scOrder = GMAIL_SHORTCUTS.map((_, i) => i).sort(() => Math.random() - 0.5);
+  scCurrentIdx = 0; scCorrect = 0; scTotal = 0;
+}
+
+function nextShortcutChallenge() {
+  if (!scOrder.length) shuffleShortcuts();
+  if (scCurrentIdx >= scOrder.length) { shuffleShortcuts(); }
+  const sc = GMAIL_SHORTCUTS[scOrder[scCurrentIdx]];
+  const container = document.getElementById('shortcutChallenge');
+  if (!container) return;
+  // Generate 4 options (1 correct + 3 random)
+  const wrongIdxs = scOrder.filter((_, i) => i !== scCurrentIdx).sort(() => Math.random() - 0.5).slice(0, 3);
+  const options = [scOrder[scCurrentIdx], ...wrongIdxs].sort(() => Math.random() - 0.5);
+  container.innerHTML = `
+    <div class="sc-question">What does <kbd>${gmailEscHtml(sc.key)}</kbd> do in Gmail?</div>
+    <div class="sc-options">${options.map(idx => {
+      const opt = GMAIL_SHORTCUTS[idx];
+      return `<button class="gmail-quiz-opt" onclick="checkShortcut(this,${idx},${scOrder[scCurrentIdx]})">${gmailEscHtml(opt.action)}</button>`;
+    }).join('')}</div>`;
+  updateShortcutScore();
+}
+
+function checkShortcut(btn, chosen, correct) {
+  scTotal++;
+  const isCorrect = chosen === correct;
+  if (isCorrect) scCorrect++;
+  btn.closest('.sc-options').querySelectorAll('.gmail-quiz-opt').forEach((b, i) => {
+    b.disabled = true;
+    const idx = parseInt(b.getAttribute('onclick').match(/checkShortcut\(this,(\d+)/)?.[1]);
+    if (idx === correct) b.classList.add('correct');
+    if (b === btn && !isCorrect) b.classList.add('wrong');
+  });
+  playSound(isCorrect ? 'success' : 'error');
+  scCurrentIdx++;
+  updateShortcutScore();
+  setTimeout(nextShortcutChallenge, 1200);
+}
+
+function updateShortcutScore() {
+  const el = document.getElementById('shortcutScore');
+  if (el) el.textContent = `${scCorrect}/${scTotal} correct`;
+}
+
 /* ═══════ OFFLINE HANDLING ═══════ */
 
 function gmailCheckOnline() {
@@ -1701,6 +2108,8 @@ renderGmailQuiz();
 loadTemplates();
 renderTemplates();
 showRandomTip();
+shuffleShortcuts();
+nextShortcutChallenge();
 gmailRenderAuth();
 if (gmailCheckOnline()) {
   log('📧 Gmail Lab ready — connect your Google account!', 'success');
