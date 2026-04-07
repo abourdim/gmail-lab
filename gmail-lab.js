@@ -2774,6 +2774,256 @@ async function gmailDiffEmails() {
   } catch (e) { log('❌ Diff failed: ' + (e.message || ''), 'error'); }
 }
 
+/* ═══════ MBOX VIEWER ═══════ */
+
+let mboxEmails = [];
+let mboxFiltered = [];
+
+function mboxLoadFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('mboxStatus');
+  const info = document.getElementById('mboxInfo');
+  if (status) status.textContent = 'Loading…';
+  if (info) info.textContent = `Reading ${file.name} (${(file.size / 1048576).toFixed(1)} MB)…`;
+  log(`📦 Loading MBOX: ${file.name} (${(file.size / 1048576).toFixed(1)} MB)`, 'info');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    mboxEmails = parseMbox(text);
+    mboxFiltered = mboxEmails;
+
+    if (status) status.textContent = '';
+    if (info) info.textContent = `✅ ${mboxEmails.length} emails loaded from ${file.name}`;
+    log(`📦 Parsed ${mboxEmails.length} emails from MBOX`, 'success');
+    playSound('success');
+
+    const searchBar = document.getElementById('mboxSearchBar');
+    if (searchBar) searchBar.style.display = '';
+    mboxRenderList(mboxEmails.slice(0, 50));
+    mboxUpdateCount(mboxEmails.length);
+  };
+  reader.onerror = () => {
+    if (status) status.textContent = '';
+    if (info) info.textContent = 'Failed to read file';
+    log('❌ Failed to read MBOX file', 'error');
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function parseMbox(text) {
+  const emails = [];
+  // Split by "From " at start of line (MBOX format)
+  const rawMessages = text.split(/\n(?=From )/);
+
+  for (const raw of rawMessages) {
+    if (!raw.trim()) continue;
+
+    // Split headers from body (first blank line)
+    const blankLineIdx = raw.search(/\n\n|\r\n\r\n/);
+    if (blankLineIdx === -1) continue;
+
+    const headerBlock = raw.substring(0, blankLineIdx);
+    let body = raw.substring(blankLineIdx + 2).trim();
+
+    // Parse headers
+    const getHeader = (name) => {
+      const regex = new RegExp(`^${name}:\\s*(.+)`, 'im');
+      const match = headerBlock.match(regex);
+      return match ? match[1].trim() : '';
+    };
+
+    const from = getHeader('From');
+    const to = getHeader('To');
+    const subject = getHeader('Subject');
+    const date = getHeader('Date');
+    const contentType = getHeader('Content-Type');
+
+    // Decode quoted-printable subject
+    let decodedSubject = subject;
+    if (subject.includes('=?')) {
+      try {
+        decodedSubject = subject.replace(/=\?([^?]+)\?([BbQq])\?([^?]+)\?=/g, (_, charset, encoding, encoded) => {
+          if (encoding.toUpperCase() === 'B') {
+            return decodeBase64Utf8(encoded);
+          } else {
+            return encoded.replace(/=([0-9A-Fa-f]{2})/g, (__, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/_/g, ' ');
+          }
+        });
+      } catch { decodedSubject = subject; }
+    }
+
+    // Extract plain text body from multipart
+    if (contentType.includes('multipart')) {
+      const boundaryMatch = contentType.match(/boundary="?([^";\s]+)"?/);
+      if (boundaryMatch) {
+        const boundary = boundaryMatch[1];
+        const parts = body.split('--' + boundary);
+        for (const part of parts) {
+          if (part.includes('Content-Type: text/plain') || part.includes('content-type: text/plain')) {
+            const partBody = part.split(/\n\n|\r\n\r\n/).slice(1).join('\n\n');
+            if (partBody.trim()) {
+              body = partBody.trim();
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Decode quoted-printable body
+    if (body.includes('=\n') || body.includes('=0D') || body.includes('=20')) {
+      body = body.replace(/=\r?\n/g, '').replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    }
+
+    // Decode base64 body
+    if (headerBlock.toLowerCase().includes('content-transfer-encoding: base64') || body.match(/^[A-Za-z0-9+/=\s]+$/)) {
+      try {
+        const cleaned = body.replace(/\s/g, '');
+        if (cleaned.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleaned)) {
+          body = decodeBase64Utf8(cleaned);
+        }
+      } catch {}
+    }
+
+    // Clean up body
+    body = body.replace(/\r\n/g, '\n').trim();
+    if (body.length > 10000) body = body.substring(0, 10000) + '\n...(truncated)';
+
+    const snippet = body.replace(/\n+/g, ' ').substring(0, 200);
+
+    emails.push({
+      from, to, subject: decodedSubject, date, body, snippet,
+      labels: getHeader('X-Gmail-Labels'),
+      id: 'mbox-' + emails.length
+    });
+  }
+
+  return emails;
+}
+
+function mboxRunSearch() {
+  const query = (document.getElementById('mboxSearch')?.value || '').trim().toLowerCase();
+  if (!query) { mboxShowAll(); return; }
+
+  // Support comma-separated multi-search
+  const terms = query.includes(',') ? query.split(',').map(t => t.trim()).filter(Boolean) : [query];
+
+  mboxFiltered = mboxEmails.filter(e => {
+    const haystack = `${e.from} ${e.to} ${e.subject} ${e.snippet} ${e.labels}`.toLowerCase();
+    return terms.some(term => haystack.includes(term));
+  });
+
+  mboxRenderList(mboxFiltered.slice(0, 100));
+  mboxUpdateCount(mboxFiltered.length);
+  log(`📦 MBOX search "${query}": ${mboxFiltered.length} results`, 'info');
+}
+
+function mboxShowAll() {
+  mboxFiltered = mboxEmails;
+  mboxRenderList(mboxEmails.slice(0, 100));
+  mboxUpdateCount(mboxEmails.length);
+}
+
+function mboxUpdateCount(n) {
+  const el = document.getElementById('mboxCount');
+  if (el) el.textContent = `${n} email${n !== 1 ? 's' : ''}`;
+}
+
+function mboxRenderList(emails) {
+  const container = document.getElementById('mboxResults');
+  if (!container) return;
+  if (!emails.length) {
+    container.innerHTML = '<p style="text-align:center;opacity:0.4;padding:12px">No emails found</p>';
+    return;
+  }
+  container.innerHTML = emails.map((e, i) => {
+    const from = gmailEscHtml((e.from || '').replace(/<.*>/, '').trim());
+    return `<div class="gmail-email" onclick="mboxReadEmail(${i})" style="cursor:pointer">
+      <div class="gmail-email-from">${from}</div>
+      <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
+      <div class="gmail-email-snippet">${gmailEscHtml(e.snippet)}</div>
+      <div class="gmail-email-date">${gmailFormatDate(e.date)}${e.labels ? ' · <span style="opacity:0.5">' + gmailEscHtml(e.labels) + '</span>' : ''}</div>
+    </div>`;
+  }).join('');
+
+  if (emails.length < mboxFiltered.length) {
+    container.insertAdjacentHTML('beforeend', `<button class="gmail-load-more" onclick="mboxLoadMore()">Show more (${mboxFiltered.length - emails.length} remaining)…</button>`);
+  }
+}
+
+let mboxDisplayed = 100;
+
+function mboxLoadMore() {
+  mboxDisplayed += 100;
+  mboxRenderList(mboxFiltered.slice(0, mboxDisplayed));
+}
+
+function mboxReadEmail(idx) {
+  const email = mboxFiltered[idx];
+  if (!email) return;
+  const container = document.getElementById('mboxResults');
+  if (!container) return;
+
+  const summary = summarizeText(email.body);
+  const replies = generateSmartReplies(email.subject, email.from);
+
+  container.innerHTML = `
+    <div class="gmail-results" style="border:none;box-shadow:none">
+      <div class="gmail-results-header">
+        <span class="gmail-results-title">📖 ${gmailEscHtml(email.subject || '(no subject)')}</span>
+        <button class="gmail-results-close" onclick="mboxRenderList(mboxFiltered.slice(0,${mboxDisplayed}))">✕</button>
+      </div>
+      <div class="gmail-results-body">
+        <div><b>From:</b> ${gmailEscHtml(email.from)}</div>
+        <div><b>To:</b> ${gmailEscHtml(email.to)}</div>
+        <div><b>Date:</b> ${gmailFormatDate(email.date)}</div>
+        ${email.labels ? `<div><b>Labels:</b> ${gmailEscHtml(email.labels)}</div>` : ''}
+        <div class="gmail-email-toolbar">
+          <div class="gmail-email-actions">
+            <button class="btn-sm" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">📝 Summary</button>
+            <div class="gmail-summary-box" style="display:none"><p>${gmailEscHtml(summary)}</p></div>
+          </div>
+          <div class="gmail-email-actions">
+            <button class="btn-sm" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">💬 Smart Replies</button>
+            <div class="gmail-replies-box" style="display:none">
+              ${replies.map(r => `<button class="gmail-reply-btn" onclick="navigator.clipboard.writeText('${r.replace(/'/g,"\\'")}');showToast('Copied!',1000)">${gmailEscHtml(r)}</button>`).join('')}
+            </div>
+          </div>
+          <button class="btn-sm" onclick="window._lastEmail={from:'${gmailEscHtml(email.from).replace(/'/g,"\\'")}',to:'${gmailEscHtml(email.to).replace(/'/g,"\\'")}',subject:'${gmailEscHtml(email.subject).replace(/'/g,"\\'")}',date:'${email.date}',body:mboxFiltered[${idx}].body};printEmail()">🖨️ PDF</button>
+        </div>
+        <div class="gmail-email-body">${gmailEscHtml(email.body)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function mboxExport(format) {
+  if (!mboxFiltered.length) { showToast('No emails to export', 1500); return; }
+  const ts = new Date().toISOString().slice(0, 10);
+  const prefix = `mbox-export-${ts}`;
+
+  if (format === 'csv') {
+    const csv = 'From,To,Subject,Date,Labels,Snippet\n' + mboxFiltered.map(e => {
+      const esc = s => '"' + (s || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"';
+      return [esc(e.from), esc(e.to), esc(e.subject), esc(e.date), esc(e.labels), esc(e.snippet)].join(',');
+    }).join('\n');
+    downloadFile(csv, `${prefix}.csv`, 'text/csv');
+  } else if (format === 'json') {
+    downloadFile(JSON.stringify(mboxFiltered.map(e => ({
+      from: e.from, to: e.to, subject: e.subject, date: e.date, labels: e.labels, body: e.body
+    })), null, 2), `${prefix}.json`, 'application/json');
+  } else {
+    const txt = mboxFiltered.map((e, i) =>
+      `════ Email ${i + 1} ════\nFrom: ${e.from}\nTo: ${e.to}\nSubject: ${e.subject}\nDate: ${e.date}\nLabels: ${e.labels}\n────\n${e.body}\n`
+    ).join('\n\n');
+    downloadFile(txt, `${prefix}.txt`, 'text/plain');
+  }
+  log(`📦 MBOX exported ${mboxFiltered.length} emails as ${format.toUpperCase()}`, 'success');
+}
+
 /* ═══════ TOOLS PANEL ═══════ */
 
 function openTools() {

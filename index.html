@@ -297,6 +297,29 @@
           <span>📦 Google Takeout — Complete Backup</span>
         </a>
 
+        <h4 class="tools-section">📦 MBOX Viewer (Offline)</h4>
+        <p style="font-size:0.75rem;opacity:0.5;margin-bottom:6px">Open a Google Takeout .mbox file — works offline, no API needed</p>
+        <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px">
+          <button class="btn-sm" onclick="document.getElementById('mboxFileInput').click()">📂 Open .mbox File</button>
+          <input type="file" id="mboxFileInput" accept=".mbox" style="display:none" onchange="mboxLoadFile(event)" />
+          <span id="mboxStatus" class="gmail-stats-status"></span>
+        </div>
+        <div id="mboxInfo" style="font-size:0.72rem;opacity:0.4;margin-top:4px"></div>
+        <div id="mboxSearchBar" style="display:none;margin-top:8px">
+          <div class="gmail-search-row">
+            <input class="gmail-search-input" id="mboxSearch" placeholder="Search loaded emails..." onkeydown="if(event.key==='Enter')mboxRunSearch()" />
+            <button class="gmail-search-btn" onclick="mboxRunSearch()">🔍</button>
+          </div>
+          <div class="gmail-stats-bar" style="margin-top:6px;flex-wrap:wrap;gap:4px">
+            <button class="btn-sm" onclick="mboxShowAll()">All</button>
+            <button class="btn-sm" onclick="mboxExport('csv')">💾 CSV</button>
+            <button class="btn-sm" onclick="mboxExport('json')">💾 JSON</button>
+            <button class="btn-sm" onclick="mboxExport('txt')">💾 TXT</button>
+            <span id="mboxCount" class="gmail-stats-status"></span>
+          </div>
+        </div>
+        <div id="mboxResults" class="gmail-contacts-list" style="max-height:500px;margin-top:8px"></div>
+
         <h4 class="tools-section">👥 Contact Book</h4>
         <div class="gmail-contacts-bar">
           <button class="btn-sm" onclick="gmailExtractContacts()" id="extractContactsBtn" disabled>🔍 Extract</button>
