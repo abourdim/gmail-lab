@@ -630,9 +630,23 @@ async function gmailHandleRead(id) {
 
 function runCustomSearch() {
   const input = document.getElementById('customInput');
-  const val = (input && input.value || '').trim();
+  let val = (input && input.value || '').trim();
   if (!val || gmailIsLoading || !gmailAccessToken) return;
-  gmailRunSearch(val, val.slice(0, 40) + (val.length > 40 ? '…' : ''));
+
+  // Multi-search: if input contains commas, build OR query
+  if (val.includes(',') && !val.includes(':')) {
+    // Plain names/emails separated by commas → from:X OR from:X OR ...
+    const terms = val.split(',').map(t => t.trim()).filter(Boolean);
+    val = terms.map(t => `from:${t} OR to:${t}`).join(' OR ');
+    gmailRunSearch(val, terms.join(', '));
+  } else if (val.includes(',') && val.includes(':')) {
+    // Already has operators but comma-separated → join with OR
+    const terms = val.split(',').map(t => t.trim()).filter(Boolean);
+    val = terms.join(' OR ');
+    gmailRunSearch(val, val.slice(0, 40));
+  } else {
+    gmailRunSearch(val, val.slice(0, 40) + (val.length > 40 ? '…' : ''));
+  }
   input.value = '';
 }
 
