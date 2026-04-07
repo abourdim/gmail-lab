@@ -1308,6 +1308,7 @@ function initHelpTabs() {
       contents.forEach(c => c.classList.remove('active'));
       tab.classList.add('active');
       const tabName = tab.dataset.tab;
+      if (!tabName) return;
       const targetId = 'help' + tabName.charAt(0).toUpperCase() + tabName.slice(1);
       const target = $(targetId);
       if (target) target.classList.add('active');

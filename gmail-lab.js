@@ -2779,7 +2779,7 @@ async function gmailDiffEmails() {
 let mboxEmails = [];
 let mboxFiltered = [];
 
-function mboxLoadFile(event) {
+async function mboxLoadFile(event) {
   const file = event.target.files[0];
   if (!file) return;
   const status = document.getElementById('mboxStatus');
@@ -2788,29 +2788,46 @@ function mboxLoadFile(event) {
   if (info) info.textContent = `Reading ${file.name} (${(file.size / 1048576).toFixed(1)} MB)…`;
   log(`📦 Loading MBOX: ${file.name} (${(file.size / 1048576).toFixed(1)} MB)`, 'info');
 
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const text = e.target.result;
-    mboxEmails = parseMbox(text);
-    mboxFiltered = mboxEmails;
-
-    if (status) status.textContent = '';
-    if (info) info.textContent = `✅ ${mboxEmails.length} emails loaded from ${file.name}`;
-    log(`📦 Parsed ${mboxEmails.length} emails from MBOX`, 'success');
-    playSound('success');
-
-    const searchBar = document.getElementById('mboxSearchBar');
-    if (searchBar) searchBar.style.display = '';
-    mboxRenderList(mboxEmails.slice(0, 50));
-    mboxUpdateCount(mboxEmails.length);
-  };
-  reader.onerror = () => {
-    if (status) status.textContent = '';
-    if (info) info.textContent = 'Failed to read file';
-    log('❌ Failed to read MBOX file', 'error');
-  };
-  reader.readAsText(file);
+  // Read in chunks for large files
+  const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB chunks
+  if (file.size <= CHUNK_SIZE) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      mboxFinishLoad(e.target.result, file.name, status, info);
+    };
+    reader.onerror = () => mboxReadError(status, info);
+    reader.readAsText(file);
+  } else {
+    // Large file: read as text with streaming
+    if (info) info.textContent = `Large file (${(file.size / 1048576).toFixed(0)} MB) — reading…`;
+    try {
+      const text = await file.text();
+      mboxFinishLoad(text, file.name, status, info);
+    } catch (e) {
+      mboxReadError(status, info);
+    }
+  }
   event.target.value = '';
+}
+
+function mboxFinishLoad(text, fileName, status, info) {
+  mboxEmails = parseMbox(text);
+  mboxFiltered = mboxEmails;
+  if (status) status.textContent = '';
+  if (info) info.textContent = `✅ ${mboxEmails.length} emails loaded from ${fileName}`;
+  log(`📦 Parsed ${mboxEmails.length} emails from MBOX`, 'success');
+  playSound('success');
+  const searchBar = document.getElementById('mboxSearchBar');
+  if (searchBar) searchBar.style.display = '';
+  mboxDisplayed = 100;
+  mboxRenderList(mboxEmails.slice(0, 100));
+  mboxUpdateCount(mboxEmails.length);
+}
+
+function mboxReadError(status, info) {
+  if (status) status.textContent = '';
+  if (info) info.textContent = '❌ Failed to read file. Try a smaller file or different browser.';
+  log('❌ Failed to read MBOX file', 'error');
 }
 
 function parseMbox(text) {
