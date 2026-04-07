@@ -276,6 +276,60 @@
   font-size: 0.72rem; color: var(--text-muted); white-space: nowrap;
 }
 
+/* ═══ SEARCH HISTORY ═══ */
+.gmail-history-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.gmail-htab {
+  flex: 1; padding: 6px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-muted); cursor: pointer;
+  font-size: 0.8rem; text-align: center;
+}
+.gmail-htab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.gmail-history-list { display: flex; flex-direction: column; gap: 4px; }
+.gmail-history-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  background: rgba(0,0,0,.1); border: 1px solid var(--border);
+  transition: background .2s;
+}
+.gmail-history-item:hover { background: rgba(0,0,0,.2); }
+.light-theme .gmail-history-item { background: rgba(0,0,0,.03); }
+.gmail-history-info { flex: 1; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.gmail-history-query { font-size: 0.82rem; font-weight: 500; }
+.gmail-history-time { font-size: 0.7rem; color: var(--text-muted); }
+.gmail-history-save, .gmail-history-del, .gmail-history-clear {
+  background: transparent; border: none; cursor: pointer; font-size: 0.9rem; padding: 4px;
+}
+.gmail-history-clear { font-size: 0.72rem; color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
+
+/* ═══ CONTACT BOOK ═══ */
+.gmail-contacts-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.gmail-contact-count {
+  margin-inline-start: auto; font-size: 0.78rem; color: var(--accent);
+  background: rgba(212,160,60,.1); padding: 2px 10px; border-radius: 10px;
+}
+.gmail-contacts-list { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; max-height: 400px; overflow-y: auto; }
+.gmail-contact-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+  background: rgba(0,0,0,.08); border: 1px solid var(--border);
+}
+.gmail-contact-item:hover { background: rgba(0,0,0,.15); }
+.light-theme .gmail-contact-item { background: rgba(0,0,0,.03); }
+.gmail-contact-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+}
+.gmail-contact-info { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gmail-contact-name { font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gmail-contact-email { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gmail-contact-count { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+.gmail-contact-search {
+  background: transparent; border: none; cursor: pointer; font-size: 0.85rem; padding: 4px;
+}
+.gmail-contact-search:hover { transform: scale(1.2); }
+
 /* ═══ MODAL ═══ */
 .gmail-modal-overlay {
   position: fixed; inset: 0; z-index: 10000;

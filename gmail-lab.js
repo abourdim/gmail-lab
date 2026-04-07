@@ -85,8 +85,10 @@ function gmailEnableButtons(enabled) {
   document.querySelectorAll('.gmail-ex-btn').forEach(b => b.disabled = !enabled);
   const ci = document.getElementById('customInput');
   const cs = document.getElementById('customSend');
+  const ec = document.getElementById('extractContactsBtn');
   if (ci) ci.disabled = !enabled;
   if (cs) cs.disabled = !enabled;
+  if (ec) ec.disabled = !enabled;
 }
 
 function gmailEscHtml(s) {
@@ -985,6 +987,250 @@ async function gmailExportFull(format) {
   if (fillEl) fillEl.style.width = '0%';
 }
 
+/* ═══════ SEARCH HISTORY ═══════ */
+
+let searchHistory = [];
+let savedSearches = [];
+
+function loadSearchHistory() {
+  try { searchHistory = JSON.parse(localStorage.getItem('gmail-search-history') || '[]'); } catch { searchHistory = []; }
+  try { savedSearches = JSON.parse(localStorage.getItem('gmail-saved-searches') || '[]'); } catch { savedSearches = []; }
+}
+
+function saveSearchHistory() {
+  try { localStorage.setItem('gmail-search-history', JSON.stringify(searchHistory.slice(0, 50))); } catch {}
+}
+
+function saveSavedSearches() {
+  try { localStorage.setItem('gmail-saved-searches', JSON.stringify(savedSearches)); } catch {}
+}
+
+function addToHistory(query, title) {
+  if (!query && query !== '') return;
+  searchHistory = searchHistory.filter(h => h.query !== query);
+  searchHistory.unshift({ query, title, time: new Date().toLocaleString() });
+  if (searchHistory.length > 50) searchHistory.pop();
+  saveSearchHistory();
+  renderHistory();
+}
+
+function saveSearch(query, title) {
+  if (savedSearches.find(s => s.query === query)) return;
+  savedSearches.push({ query, title, time: new Date().toLocaleString() });
+  saveSavedSearches();
+  renderHistory();
+  log(`⭐ Search saved: ${title || query}`, 'success');
+  playSound('success');
+}
+
+function removeSavedSearch(idx) {
+  savedSearches.splice(idx, 1);
+  saveSavedSearches();
+  renderHistory();
+}
+
+function clearSearchHistory() {
+  searchHistory = [];
+  saveSearchHistory();
+  renderHistory();
+  log('🕐 Search history cleared', 'info');
+}
+
+function showHistoryTab(tab) {
+  document.querySelectorAll('.gmail-htab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.gmail-htab[onclick*="${tab}"]`)?.classList.add('active');
+  const recent = document.getElementById('historyRecent');
+  const saved = document.getElementById('historySaved');
+  if (recent) recent.style.display = tab === 'recent' ? '' : 'none';
+  if (saved) saved.style.display = tab === 'saved' ? '' : 'none';
+}
+
+function renderHistory() {
+  const recentEl = document.getElementById('historyRecent');
+  const savedEl = document.getElementById('historySaved');
+
+  if (recentEl) {
+    if (!searchHistory.length) {
+      recentEl.innerHTML = '<p style="text-align:center;opacity:0.4;padding:12px">No recent searches</p>';
+    } else {
+      recentEl.innerHTML = `<div style="text-align:right;margin-bottom:6px"><button class="gmail-history-clear" onclick="clearSearchHistory()">🧹 Clear</button></div>` +
+        searchHistory.map(h => `
+          <div class="gmail-history-item">
+            <div class="gmail-history-info" onclick="gmailRunSearch('${gmailEscHtml(h.query).replace(/'/g,"\\'")}','${gmailEscHtml(h.title||h.query).replace(/'/g,"\\'")}')">
+              <span class="gmail-history-query">${gmailEscHtml(h.title || h.query)}</span>
+              <span class="gmail-history-time">${h.time}</span>
+            </div>
+            <button class="gmail-history-save" onclick="saveSearch('${gmailEscHtml(h.query).replace(/'/g,"\\'")}','${gmailEscHtml(h.title||h.query).replace(/'/g,"\\'")}')">⭐</button>
+          </div>
+        `).join('');
+    }
+  }
+
+  if (savedEl) {
+    if (!savedSearches.length) {
+      savedEl.innerHTML = '<p style="text-align:center;opacity:0.4;padding:12px">No saved searches</p>';
+    } else {
+      savedEl.innerHTML = savedSearches.map((s, i) => `
+        <div class="gmail-history-item">
+          <div class="gmail-history-info" onclick="gmailRunSearch('${gmailEscHtml(s.query).replace(/'/g,"\\'")}','${gmailEscHtml(s.title||s.query).replace(/'/g,"\\'")}')">
+            <span class="gmail-history-query">⭐ ${gmailEscHtml(s.title || s.query)}</span>
+            <span class="gmail-history-time">${s.time}</span>
+          </div>
+          <button class="gmail-history-del" onclick="removeSavedSearch(${i})">🗑️</button>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+// Hook into gmailRunSearch to track history
+const _origRunSearch = gmailRunSearch;
+gmailRunSearch = async function(query, title, max) {
+  addToHistory(query, title);
+  return _origRunSearch(query, title, max);
+};
+
+/* ═══════ CONTACT BOOK ═══════ */
+
+let extractedContacts = [];
+let isExtracting = false;
+
+async function gmailExtractContacts() {
+  if (isExtracting || !gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+
+  isExtracting = true;
+  const btn = document.getElementById('extractContactsBtn');
+  if (btn) btn.textContent = '⏳ Extracting…';
+
+  const contactMap = {};
+  let pageToken = null;
+  let totalFetched = 0;
+
+  log('👥 Extracting contacts from emails…', 'info');
+
+  try {
+    // Scan recent 500 emails for unique senders/recipients
+    do {
+      const listParams = { userId: 'me', maxResults: 200 };
+      if (pageToken) listParams.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(listParams);
+      const msgs = r.result.messages || [];
+      pageToken = r.result.nextPageToken;
+
+      for (const m of msgs) {
+        try {
+          const d = await gapi.client.gmail.users.messages.get({
+            userId: 'me', id: m.id, format: 'metadata',
+            metadataHeaders: ['From', 'To']
+          });
+          const headers = d.result.payload.headers;
+          const from = (headers.find(h => h.name === 'From') || {}).value || '';
+          const to = (headers.find(h => h.name === 'To') || {}).value || '';
+
+          [from, to].forEach(field => {
+            if (!field) return;
+            // Split multiple recipients
+            field.split(',').forEach(part => {
+              part = part.trim();
+              const emailMatch = part.match(/<([^>]+)>/);
+              const email = emailMatch ? emailMatch[1].toLowerCase() : part.toLowerCase();
+              if (!email || !email.includes('@')) return;
+              const nameMatch = part.match(/^"?([^"<]+)"?\s*</);
+              const name = nameMatch ? nameMatch[1].trim() : '';
+
+              if (!contactMap[email]) {
+                contactMap[email] = { email, name, count: 1 };
+              } else {
+                contactMap[email].count++;
+                if (name && !contactMap[email].name) contactMap[email].name = name;
+              }
+            });
+          });
+        } catch {}
+      }
+
+      totalFetched += msgs.length;
+      if (btn) btn.textContent = `⏳ ${totalFetched} emails scanned…`;
+
+      if (totalFetched >= 500) break;
+      // Small delay to avoid rate limits
+      await new Promise(r => setTimeout(r, 300));
+    } while (pageToken);
+
+    extractedContacts = Object.values(contactMap).sort((a, b) => b.count - a.count);
+
+    log(`👥 Extracted ${extractedContacts.length} unique contacts from ${totalFetched} emails`, 'success');
+    playSound('success');
+    renderContacts();
+    updateContactButtons(true);
+
+  } catch (e) {
+    log('❌ Contact extraction failed: ' + (e.message || ''), 'error');
+  }
+
+  isExtracting = false;
+  if (btn) btn.textContent = '🔍 Extract Contacts';
+}
+
+function renderContacts(filter) {
+  const container = document.getElementById('contactsList');
+  const countEl = document.getElementById('contactCount');
+  if (!container) return;
+
+  let list = extractedContacts;
+  if (filter) {
+    const f = filter.toLowerCase();
+    list = list.filter(c => c.email.includes(f) || (c.name && c.name.toLowerCase().includes(f)));
+  }
+
+  if (countEl) countEl.textContent = `${list.length} contact${list.length !== 1 ? 's' : ''}`;
+
+  if (!list.length) {
+    container.innerHTML = '<p style="text-align:center;opacity:0.4;padding:12px">No contacts found</p>';
+    return;
+  }
+
+  container.innerHTML = list.slice(0, 200).map(c => `
+    <div class="gmail-contact-item">
+      <div class="gmail-contact-avatar">${(c.name || c.email)[0].toUpperCase()}</div>
+      <div class="gmail-contact-info">
+        <span class="gmail-contact-name">${gmailEscHtml(c.name || c.email.split('@')[0])}</span>
+        <span class="gmail-contact-email">${gmailEscHtml(c.email)}</span>
+      </div>
+      <span class="gmail-contact-count">${c.count}x</span>
+      <button class="gmail-contact-search" onclick="gmailRunSearch('from:${c.email} OR to:${c.email}','All emails: ${gmailEscHtml(c.name||c.email).replace(/'/g,"")}')" title="Search emails">🔍</button>
+    </div>
+  `).join('');
+}
+
+function filterContacts() {
+  const val = document.getElementById('contactFilter')?.value || '';
+  renderContacts(val);
+}
+
+function updateContactButtons(enabled) {
+  const csv = document.getElementById('exportContactsCsvBtn');
+  const json = document.getElementById('exportContactsJsonBtn');
+  if (csv) csv.disabled = !enabled;
+  if (json) json.disabled = !enabled;
+}
+
+function gmailExportContacts(format) {
+  if (!extractedContacts.length) return;
+
+  const ts = new Date().toISOString().slice(0, 10);
+  if (format === 'csv') {
+    const csv = 'Name,Email,Frequency\n' + extractedContacts.map(c =>
+      `"${(c.name||'').replace(/"/g,'""')}","${c.email}","${c.count}"`
+    ).join('\n');
+    downloadFile(csv, `gmail-contacts-${ts}.csv`, 'text/csv');
+  } else {
+    downloadFile(JSON.stringify(extractedContacts, null, 2), `gmail-contacts-${ts}.json`, 'application/json');
+  }
+  log(`👥 Exported ${extractedContacts.length} contacts as ${format.toUpperCase()}`, 'success');
+}
+
 /* ═══════ OFFLINE HANDLING ═══════ */
 
 function gmailCheckOnline() {
@@ -1014,6 +1260,8 @@ window.addEventListener('offline', () => {
 /* ═══════ INIT ═══════ */
 
 gmailBuildExamples();
+loadSearchHistory();
+renderHistory();
 gmailRenderAuth();
 if (gmailCheckOnline()) {
   log('📧 Gmail Lab ready — connect your Google account!', 'success');

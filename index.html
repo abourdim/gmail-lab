@@ -105,6 +105,37 @@
         </div>
       </details>
 
+      <!-- ═══════════════════ SEARCH HISTORY & SAVED ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">🕐</span> <span data-i18n="sectionHistory">Search History & Saved</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div class="gmail-history-tabs">
+            <button class="gmail-htab active" onclick="showHistoryTab('recent')">🕐 Recent</button>
+            <button class="gmail-htab" onclick="showHistoryTab('saved')">⭐ Saved</button>
+          </div>
+          <div id="historyRecent" class="gmail-history-list"></div>
+          <div id="historySaved" class="gmail-history-list" style="display:none"></div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ CONTACT BOOK ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">👥</span> <span data-i18n="sectionContacts">Contact Book</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <p style="font-size:0.85rem;opacity:0.6;margin-bottom:0.6rem">Auto-extracted from your emails</p>
+          <div class="gmail-contacts-bar">
+            <button class="btn-sm" onclick="gmailExtractContacts()" id="extractContactsBtn" disabled>🔍 Extract Contacts</button>
+            <button class="btn-sm" onclick="gmailExportContacts('csv')" id="exportContactsCsvBtn" disabled>💾 CSV</button>
+            <button class="btn-sm" onclick="gmailExportContacts('json')" id="exportContactsJsonBtn" disabled>💾 JSON</button>
+            <span class="gmail-contact-count" id="contactCount">0 contacts</span>
+          </div>
+          <div class="gmail-contacts-filter">
+            <input type="text" class="gmail-search-input" id="contactFilter" placeholder="Filter contacts..." oninput="filterContacts()" style="margin-top:8px" />
+          </div>
+          <div id="contactsList" class="gmail-contacts-list"></div>
+        </div>
+      </details>
+
       <!-- ═══════════════════ HOW IT WORKS ═══════════════════ -->
       <details class="collapsible">
         <summary><span class="icon">🧠</span> <span data-i18n="sectionB">How It Works</span></summary>
