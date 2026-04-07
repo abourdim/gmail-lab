@@ -1,0 +1,219 @@
+/* ═══════════════════════════════════════════
+   Gmail Lab — Custom Styles
+   Extends Workshop-DIY template
+   ═══════════════════════════════════════════ */
+
+/* ═══ AUTH ═══ */
+.gmail-auth-connected { border-left: 3px solid var(--c-success, #40d87a); }
+
+.gmail-profile-row {
+  display: flex; align-items: center; gap: 0.8rem;
+}
+.gmail-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid var(--c-success, #40d87a); object-fit: cover;
+  flex-shrink: 0;
+}
+.gmail-avatar-placeholder {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #4285f4; display: flex; align-items: center;
+  justify-content: center; font-size: 1.2rem; font-weight: 700;
+  color: #fff; border: 2px solid var(--c-success, #40d87a); flex-shrink: 0;
+}
+.gmail-profile-info { flex: 1; }
+.gmail-profile-name { font-weight: 700; font-size: 1rem; }
+.gmail-profile-email { font-size: 0.82rem; opacity: 0.6; }
+.gmail-profile-stats { font-size: 0.78rem; opacity: 0.5; margin-top: 2px; }
+
+/* ═══ GOOGLE SIGN-IN BUTTON ═══ */
+.gmail-google-btn {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  padding: 0.65rem 1.4rem; border-radius: 8px;
+  background: #fff; color: #333; border: none;
+  font-family: inherit; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.gmail-google-btn:hover {
+  transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.gmail-google-btn svg { width: 20px; height: 20px; }
+
+.gmail-signout-btn {
+  background: none; border: 1px solid var(--c-border, rgba(255,255,255,0.08));
+  color: var(--c-text-dim, #9a96a6); padding: 0.35rem 0.8rem;
+  border-radius: 6px; cursor: pointer; font-family: inherit;
+  font-size: 0.78rem; transition: all 0.2s;
+}
+.gmail-signout-btn:hover { border-color: #f04060; color: #f04060; }
+
+/* ═══ CLIENT ID INPUT ═══ */
+.gmail-clientid-row {
+  display: flex; gap: 0.5rem; margin-bottom: 0.8rem;
+}
+.gmail-clientid-input {
+  flex: 1; padding: 0.55rem 0.75rem;
+  border: 1px solid var(--c-border, rgba(255,255,255,0.08));
+  border-radius: 8px; background: rgba(255,255,255,0.04);
+  color: var(--c-text, #e8e4dc); font-family: monospace;
+  font-size: 0.8rem; outline: none;
+}
+.gmail-clientid-input:focus { border-color: var(--c-accent, #d4a73a); }
+.gmail-clientid-save {
+  padding: 0.55rem 1rem; background: #4285f4; color: #fff;
+  border: none; border-radius: 8px; cursor: pointer;
+  font-family: inherit; font-size: 0.82rem; font-weight: 700;
+  transition: all 0.2s;
+}
+.gmail-clientid-save:hover { background: var(--c-accent, #d4a73a); color: #000; }
+
+/* ═══ EXAMPLE BUTTONS ═══ */
+.gmail-ex-btn {
+  display: flex; align-items: center; gap: 0.75rem;
+  width: 100%; padding: 0.75rem 0.9rem; margin-bottom: 0.45rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--c-border, rgba(255,255,255,0.08));
+  border-radius: 10px; color: inherit; cursor: pointer;
+  text-align: left; font-family: inherit; font-size: 0.9rem;
+  transition: all 0.2s;
+}
+.gmail-ex-btn:hover {
+  background: var(--c-accent, #d4a73a); color: #000;
+  border-color: var(--c-accent, #d4a73a);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(212,167,58,0.2);
+}
+.gmail-ex-btn:active { transform: scale(0.98); }
+.gmail-ex-btn:disabled { opacity: 0.35; pointer-events: none; }
+.gmail-ex-btn .ex-icon { font-size: 1.3em; flex-shrink: 0; }
+.gmail-ex-btn .ex-text { flex: 1; min-width: 0; }
+.gmail-ex-btn .ex-label { font-weight: 700; }
+.gmail-ex-btn .ex-tip { font-size: 0.76em; opacity: 0.5; margin-top: 2px; }
+.gmail-ex-btn .ex-run {
+  font-size: 0.72em; opacity: 0.35;
+  font-family: 'Righteous', sans-serif;
+}
+
+/* ═══ SEARCH INPUT ═══ */
+.gmail-search-row { display: flex; gap: 0.5rem; }
+.gmail-search-input {
+  flex: 1; padding: 0.65rem 0.9rem;
+  border: 1px solid var(--c-border, rgba(255,255,255,0.08));
+  border-radius: 10px; background: rgba(255,255,255,0.04);
+  color: var(--c-text, #e8e4dc); font-family: inherit;
+  font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+}
+.gmail-search-input:focus { border-color: var(--c-accent, #d4a73a); }
+.gmail-search-input::placeholder { color: var(--c-text-dim, #9a96a6); opacity: 0.6; }
+.gmail-search-btn {
+  padding: 0.65rem 1.1rem;
+  background: var(--c-accent, #d4a73a); color: #000;
+  border: none; border-radius: 10px;
+  font-family: 'Righteous', sans-serif; font-size: 0.85rem;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.gmail-search-btn:hover { filter: brightness(1.15); }
+.gmail-search-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ═══ RESULTS PANEL ═══ */
+.gmail-results {
+  background: rgba(0,0,0,0.15);
+  border: 1px solid var(--c-border, rgba(255,255,255,0.08));
+  border-radius: 12px; margin-bottom: 0.8rem;
+  overflow: hidden; animation: gmailFade 0.3s ease;
+}
+@keyframes gmailFade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.gmail-results-header {
+  padding: 0.7rem 1rem; display: flex; align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--c-border, rgba(255,255,255,0.08));
+}
+.gmail-results-title { font-family: 'Righteous', sans-serif; font-size: 0.9rem; }
+.gmail-results-close {
+  background: none; border: none;
+  color: var(--c-text-dim, #9a96a6);
+  cursor: pointer; font-size: 1.1rem; padding: 0 0.3rem;
+}
+.gmail-results-body {
+  padding: 0.8rem 1rem; max-height: 450px; overflow-y: auto;
+  font-size: 0.88rem; line-height: 1.55;
+}
+.gmail-results-body::-webkit-scrollbar { width: 5px; }
+.gmail-results-body::-webkit-scrollbar-thumb {
+  background: var(--c-border, rgba(255,255,255,0.08)); border-radius: 3px;
+}
+
+/* ═══ EMAIL CARDS ═══ */
+.gmail-email {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--c-border, rgba(255,255,255,0.08));
+  border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 0.4rem;
+  cursor: pointer; transition: all 0.2s;
+}
+.gmail-email:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: #4285f4;
+}
+.gmail-email.unread { border-left: 3px solid #4285f4; }
+.gmail-email-from { font-weight: 700; font-size: 0.85rem; }
+.gmail-email-subject { font-size: 0.83rem; margin-top: 2px; }
+.gmail-email-snippet {
+  font-size: 0.76rem; opacity: 0.5; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gmail-email-date { font-size: 0.7rem; opacity: 0.4; margin-top: 3px; }
+.gmail-email-body {
+  margin-top: 0.5rem; padding-top: 0.5rem;
+  border-top: 1px solid var(--c-border, rgba(255,255,255,0.08));
+  font-size: 0.82rem; white-space: pre-wrap; word-break: break-word; line-height: 1.5;
+}
+.gmail-label-tag {
+  display: inline-block; padding: 1px 5px; border-radius: 4px;
+  font-size: 0.68rem; background: rgba(66,133,244,0.12);
+  color: #4285f4; margin-right: 3px;
+}
+.gmail-label-tag.user { background: rgba(52,168,83,0.12); color: #34a853; }
+
+/* ═══ LOADING ═══ */
+.gmail-loading {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 1rem; opacity: 0.6; font-size: 0.88rem;
+}
+.gmail-spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--c-border, rgba(255,255,255,0.08));
+  border-top-color: var(--c-accent, #d4a73a);
+  border-radius: 50%; animation: gmailSpin 0.8s linear infinite;
+}
+@keyframes gmailSpin { to { transform: rotate(360deg); } }
+
+/* ═══ CHEAT SHEET ═══ */
+.gmail-cheat-grid {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.9rem; font-size: 0.86rem;
+}
+.gmail-cheat-grid code {
+  color: var(--c-accent, #d4a73a);
+  font-family: monospace; font-size: 0.85em;
+}
+.gmail-tip {
+  padding: 0.6rem; border-radius: 8px;
+  background: rgba(255,255,255,0.03); font-size: 0.84rem;
+}
+
+/* ═══ HOW STEPS ═══ */
+.how-step { margin-bottom: 0.55rem; font-size: 0.9rem; line-height: 1.5; }
+
+/* ═══ SETUP LIST ═══ */
+.gmail-setup-list {
+  padding-left: 1.2rem; margin: 0.5rem 0;
+}
+.gmail-setup-list li { margin-bottom: 0.3rem; }
+.gmail-setup-list a { color: #4285f4; }
+.gmail-setup-list code {
+  background: rgba(255,255,255,0.06); padding: 1px 4px;
+  border-radius: 3px; font-size: 0.83em; color: var(--c-accent, #d4a73a);
+}

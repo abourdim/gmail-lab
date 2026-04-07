@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="mosque-gold">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gmail Lab — Workshop DIY</title>
+  <meta name="description" content="Learn to use Gmail search — connect your own Google account, explore your inbox!" />
+  <meta name="author" content="Workshop-DIY — abourdim" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Gmail Lab — Workshop DIY" />
+  <meta property="og:description" content="Learn to use Gmail search — connect your own Google account, explore your inbox!" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="icon-512.png" />
+
+  <!-- PWA -->
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#08091a" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Righteous&family=Tajawal:wght@400;500;700&family=Bangers&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="gmail-lab.css" />
+</head>
+
+<body>
+  <!-- ═══════════════════ SPLASH SCREEN ═══════════════════ -->
+  <div class="splash" id="splash" onclick="dismissSplash()">
+    <div class="splash-inner">
+      <div class="splash-logo" id="splashLogo"></div>
+      <div class="splash-title">Workshop DIY</div>
+      <div class="splash-sub" data-i18n="subtitle">📧 search · 📖 read · ✏️ draft</div>
+      <div class="splash-hint" data-i18n="splashHint">tap to skip</div>
+    </div>
+  </div>
+
+  <div class="app">
+    <div class="deco-band top-band" aria-hidden="true"></div>
+
+    <div class="rows-container">
+
+      <!-- ═══════════════════ HEADER ═══════════════════ -->
+      <div class="header">
+        <div class="bismillah" aria-hidden="true">
+          <span class="bism-ornament">&#x2726;</span>
+          بِسْمِ ٱللَّٰهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
+          <span class="bism-ornament">&#x2726;</span>
+        </div>
+
+        <div class="title-block">
+          <div class="logo-wrap" id="logoWrap"></div>
+          <div>
+            <h1 data-i18n="title">Gmail Lab</h1>
+            <div class="subtitle" data-i18n="subtitle">📧 search · 📖 read · ✏️ draft</div>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <div class="header-buttons">
+            <button id="helpBtn" class="btn-icon-only" aria-label="Help">❓</button>
+            <button id="settingsBtn" class="btn-icon-only" aria-label="Settings">⚙️</button>
+            <button id="logBtn" class="btn-icon-only" aria-label="Activity Log">📜</button>
+          </div>
+          <div class="status-pill" id="statusPill">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText" data-i18n="disconnected">Disconnected</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════ AUTH CARD ═══════════════════ -->
+      <div class="card" id="authCard">
+        <div class="card-header">
+          <div>
+            <div class="card-title"><span class="icon">🔐</span> <span data-i18n="authTitle">Your Gmail Account</span></div>
+            <div class="card-subtitle"><span data-i18n="authDesc">Sign in with Google to explore your inbox</span></div>
+          </div>
+        </div>
+        <div id="authBody" style="padding:0.5rem 1rem 1rem">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+
+      <!-- ═══════════════════ RESULTS AREA ═══════════════════ -->
+      <div id="resultsContainer"></div>
+
+      <!-- ═══════════════════ QUICK COMMANDS ═══════════════════ -->
+      <details class="collapsible" open>
+        <summary><span class="icon">🚀</span> <span data-i18n="sectionA">Quick Commands — Tap to Run!</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <div id="exampleButtons"></div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ ASK ANYTHING ═══════════════════ -->
+      <details class="collapsible" open>
+        <summary><span class="icon">💬</span> <span data-i18n="sectionAsk">Ask Anything</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <p style="font-size:0.88rem;opacity:0.6;margin-bottom:0.6rem" data-i18n="askDesc">Type any Gmail search and see the results live!</p>
+          <div class="gmail-search-row">
+            <input class="gmail-search-input" id="customInput" data-i18n-placeholder="askPlaceholder" placeholder="e.g. from:mom is:unread" onkeydown="if(event.key==='Enter')runCustomSearch()" disabled />
+            <button class="gmail-search-btn" id="customSend" onclick="runCustomSearch()" disabled><span data-i18n="askBtn">Search</span> 🔍</button>
+          </div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ HOW IT WORKS ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">🧠</span> <span data-i18n="sectionB">How It Works</span></summary>
+        <div class="card" style="padding:0.8rem 1rem;line-height:1.6">
+          <div class="how-step"><strong>1️⃣</strong> <span data-i18n="how1">You sign in with your Google account above.</span></div>
+          <div class="how-step"><strong>2️⃣</strong> <span data-i18n="how2">This app gets <b>read-only</b> access to your Gmail.</span></div>
+          <div class="how-step"><strong>3️⃣</strong> <span data-i18n="how3">Tap any quick command or type a search to query your inbox.</span></div>
+          <div class="how-step"><strong>4️⃣</strong> <span data-i18n="how4">Results appear right here — click any email to read it!</span></div>
+          <div class="gmail-tip" style="margin-top:0.8rem">
+            <strong>🔒 </strong><span data-i18n="howPrivacy">Privacy: Your emails go directly from Google to your browser. Nothing is stored or sent anywhere else. You can sign out anytime.</span>
+          </div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ CHEAT SHEET ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">📋</span> <span data-i18n="sectionC">Gmail Search Cheat Sheet</span></summary>
+        <div class="card" style="padding:0.8rem 1rem;line-height:1.6">
+          <div class="gmail-cheat-grid">
+            <code>from:</code><span data-i18n="cs_from">Find emails from someone</span>
+            <code>to:</code><span data-i18n="cs_to">Find emails you sent to someone</span>
+            <code>subject:</code><span data-i18n="cs_subject">Search by subject line</span>
+            <code>is:unread</code><span data-i18n="cs_unread">Only unread emails</span>
+            <code>is:starred</code><span data-i18n="cs_starred">Only starred emails</span>
+            <code>has:attachment</code><span data-i18n="cs_attach">Emails with files attached</span>
+            <code>after: / before:</code><span data-i18n="cs_date">Date range (e.g. after:2025/01/01)</span>
+            <code>newer_than:7d</code><span data-i18n="cs_newer">Last 7 days</span>
+            <code>label:</code><span data-i18n="cs_label">Filter by label name</span>
+          </div>
+          <div class="gmail-tip" style="margin-top:0.8rem">
+            <strong>🤓 </strong><span data-i18n="csTip">Pro tip: You can combine them! Try <code>from:teacher is:unread has:attachment</code></span>
+          </div>
+        </div>
+      </details>
+
+      <!-- ═══════════════════ SETUP GUIDE ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">🔧</span> <span data-i18n="sectionSetup">Setup — Get Your Google Client ID</span></summary>
+        <div class="card" style="padding:0.8rem 1rem;line-height:1.6;font-size:0.9rem">
+          <p data-i18n="setupIntro"><strong>To use this app, you need a free Google OAuth Client ID.</strong> Here's how:</p>
+          <ol class="gmail-setup-list">
+            <li data-i18n="setup1">Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console → Credentials</a></li>
+            <li data-i18n="setup2">Create a project (or select existing)</li>
+            <li data-i18n="setup3">Click <b>"+ CREATE CREDENTIALS"</b> → <b>"OAuth client ID"</b></li>
+            <li data-i18n="setup4">Application type: <b>"Web application"</b></li>
+            <li data-i18n="setup5">Under <b>"Authorized JavaScript origins"</b>, add your URL (e.g. <code>http://localhost:8080</code>)</li>
+            <li data-i18n="setup6">Click <b>"Create"</b> and copy your <b>Client ID</b></li>
+            <li data-i18n="setup7">Go to <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">API Library → Gmail API</a> and click <b>"Enable"</b></li>
+            <li data-i18n="setup8">Paste the Client ID in the field at the top of this app</li>
+          </ol>
+          <p style="margin-top:0.5rem;opacity:0.6" data-i18n="setupNote">Your Client ID looks like: <code>123456-abc.apps.googleusercontent.com</code></p>
+          <p style="margin-top:0.3rem;opacity:0.6" data-i18n="setupTest"><b>Note:</b> For testing, add your Google account as a "Test user" under OAuth consent screen settings.</p>
+        </div>
+      </details>
+
+    </div>
+
+    <!-- ═══════════════════ FOOTER ═══════════════════ -->
+    <footer class="app-footer">
+      <span class="footer-text">powered by <a href="https://workshop-diy.org" target="_blank" rel="noopener">workshop-diy.org</a></span>
+      <span class="hijri-date" id="hijriDate"></span>
+    </footer>
+
+    <div class="deco-band bottom-band" aria-hidden="true"></div>
+  </div>
+
+  <!-- Matrix rain canvas -->
+  <canvas id="matrixCanvas" class="matrix-canvas"></canvas>
+
+  <!-- Debug panel -->
+  <div id="debugPanel" class="debug-panel">
+    <span id="debugFps">0 FPS</span>
+    <span id="debugMem">0 MB</span>
+  </div>
+
+  <!-- ═══════════════════ LEFT PANEL — Help ═══════════════════ -->
+  <div class="sidebar-overlay" id="helpOverlay"></div>
+  <aside class="sidebar sidebar-left" id="helpPanel" aria-label="Help" role="dialog" aria-modal="true">
+    <div class="sidebar-header">
+      <span class="sidebar-title" data-i18n="help">❓ Help</span>
+      <button id="helpCloseBtn" class="btn-icon-only" aria-label="Close">✕</button>
+    </div>
+
+    <div class="help-tabs">
+      <button class="help-tab active" data-tab="faq" data-i18n="faq">FAQ</button>
+      <button class="help-tab" data-tab="howto" data-i18n="howto">How-To</button>
+      <button class="help-tab" data-tab="wiki" data-i18n="wiki">Wiki</button>
+    </div>
+
+    <div class="sidebar-body">
+      <div class="help-content active" id="helpFaq">
+        <details class="help-item">
+          <summary data-i18n="faq_q1">What is Gmail Lab?</summary>
+          <p data-i18n="faq_a1">Gmail Lab lets you explore your Gmail inbox — search, read, and learn Gmail search syntax in a fun way!</p>
+        </details>
+        <details class="help-item">
+          <summary data-i18n="faq_q2">How do I connect?</summary>
+          <p data-i18n="faq_a2">Enter your Google OAuth Client ID, then click "Sign in with Google". You need a free Google Cloud project.</p>
+        </details>
+        <details class="help-item">
+          <summary data-i18n="faq_q3">Is it safe?</summary>
+          <p data-i18n="faq_a3">Yes! The app uses read-only access — it cannot modify, delete, or send emails. Everything stays in your browser.</p>
+        </details>
+        <details class="help-item">
+          <summary data-i18n="faq_q4">Can anyone use it?</summary>
+          <p data-i18n="faq_a4">Yes! Each user signs in with their own Google account. No data is shared between users.</p>
+        </details>
+      </div>
+
+      <div class="help-content" id="helpHowto">
+        <div class="help-step"><span class="help-step-num">1</span><p data-i18n="howto_1">Get a Google OAuth Client ID (see Setup section).</p></div>
+        <div class="help-step"><span class="help-step-num">2</span><p data-i18n="howto_2">Paste your Client ID and click "Sign in with Google".</p></div>
+        <div class="help-step"><span class="help-step-num">3</span><p data-i18n="howto_3">Tap any Quick Command button to search your inbox.</p></div>
+        <div class="help-step"><span class="help-step-num">4</span><p data-i18n="howto_4">Click any email in the results to read the full message.</p></div>
+      </div>
+
+      <div class="help-content" id="helpWiki">
+        <div class="wiki-entry">
+          <h3 data-i18n="wiki_themes_title">📧 Gmail API</h3>
+          <p data-i18n="wiki_themes">This app uses the official Google Gmail API with OAuth2. Your browser talks directly to Google — no middleman.</p>
+        </div>
+        <div class="wiki-entry">
+          <h3 data-i18n="wiki_i18n_title">🔍 Search Syntax</h3>
+          <p data-i18n="wiki_i18n">Gmail search supports operators like from:, to:, subject:, is:unread, has:attachment, and date ranges.</p>
+        </div>
+        <div class="wiki-entry">
+          <h3 data-i18n="wiki_log_title">📜 Activity Log</h3>
+          <p data-i18n="wiki_log">Every API call is logged — see what's happening behind the scenes in real time.</p>
+        </div>
+        <div class="wiki-entry">
+          <h3 data-i18n="wiki_privacy_title">🔒 Privacy</h3>
+          <p data-i18n="wiki_privacy">Read-only access. No server. No tracking. All data stays in your browser. Sign out anytime to revoke access.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span>Workshop DIY</span>
+      <span class="badge"><strong>v1.0</strong></span>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════ RIGHT PANEL — Settings ═══════════════════ -->
+  <div class="sidebar-overlay" id="settingsOverlay"></div>
+  <aside class="sidebar" id="settingsPanel" aria-label="Settings" role="dialog" aria-modal="true">
+    <div class="sidebar-header">
+      <span class="sidebar-title" data-i18n="settings">⚙️ Settings</span>
+      <button id="settingsCloseBtn" class="btn-icon-only" aria-label="Close">✕</button>
+    </div>
+
+    <div class="sidebar-body">
+      <div class="sidebar-group">
+        <label class="sidebar-label" data-i18n="language">Language</label>
+        <select id="langSelect" class="sidebar-select" aria-label="Language">
+          <option value="en" selected>🇬🇧 EN</option>
+          <option value="fr">🇫🇷 FR</option>
+          <option value="ar">🇩🇿 عربي</option>
+        </select>
+      </div>
+      <div class="sidebar-group">
+        <label class="sidebar-label" data-i18n="theme">Theme</label>
+        <select id="themeSelect" class="sidebar-select" aria-label="Theme">
+          <option value="mosque-gold" data-i18n-opt="t_mosque">Mosque</option>
+          <option value="zellige" data-i18n-opt="t_zellige">Zellige</option>
+          <option value="andalus" data-i18n-opt="t_andalus">Andalus</option>
+          <option value="riad" data-i18n-opt="t_riad">Riad</option>
+          <option value="medina" data-i18n-opt="t_medina">Medina</option>
+          <option value="space" data-i18n-opt="t_space">Space</option>
+          <option value="jungle" data-i18n-opt="t_jungle">Jungle</option>
+          <option value="robot" data-i18n-opt="t_robot">Robot</option>
+        </select>
+      </div>
+      <div class="sidebar-group">
+        <label class="toggle-ctrl">
+          <input type="checkbox" id="soundToggle" class="checkbox-ctrl" />
+          <span data-i18n="soundEffects">🔊 Sound effects</span>
+        </label>
+      </div>
+      <div class="sidebar-group">
+        <button id="whisperBtn" class="btn-sm" style="width:100%"><span class="btn-icon">🎤</span> <span data-i18n="whisperMode">Whisper mode</span></button>
+      </div>
+      <div class="sidebar-group">
+        <button id="breathingBtn" class="btn-sm" style="width:100%"><span class="btn-icon">🫁</span> <span data-i18n="breathingGuide">Breathing guide</span></button>
+        <div class="dhikr-display" id="dhikrDisplay" style="display:none">
+          <span class="dhikr-label">سبحان الله</span>
+          <span class="dhikr-count" id="dhikrCounter">0</span>
+          <button id="dhikrBtn" class="btn-sm primary"><span data-i18n="dhikrTap">Tap</span></button>
+        </div>
+      </div>
+      <div class="sidebar-group">
+        <button id="musicBtn" class="btn-sm" style="width:100%"><span class="btn-icon">🎵</span> <span data-i18n="musicMode">Music reactive</span></button>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span>Workshop DIY</span>
+      <span class="badge"><strong>v1.0</strong></span>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════ RIGHT PANEL — Activity Log ═══════════════════ -->
+  <aside class="sidebar" id="logPanel" aria-label="Activity Log">
+    <div class="resize-handle" id="logResizeHandle"></div>
+    <div class="sidebar-header">
+      <span class="sidebar-title" data-i18n="activityLog">📜 Activity Log</span>
+      <div class="log-controls">
+        <button id="clearLogBtn" class="btn-sm"><span class="btn-icon">🧹</span><span data-i18n="clear">Clear</span></button>
+        <button id="copyLogBtn" class="btn-sm"><span class="btn-icon">📋</span><span data-i18n="copy">Copy</span></button>
+        <button id="exportLogBtn" class="btn-sm"><span class="btn-icon">💾</span><span data-i18n="export">Export</span></button>
+        <button id="logCloseBtn" class="btn-icon-only" aria-label="Close">✕</button>
+      </div>
+    </div>
+
+    <div class="log-filters" id="logFilters">
+      <button class="log-filter active" data-filter="all" data-i18n="filterAll">All</button>
+      <button class="log-filter" data-filter="info">Info</button>
+      <button class="log-filter" data-filter="success">✓</button>
+      <button class="log-filter" data-filter="error">✗</button>
+      <button class="log-filter" data-filter="tx">TX</button>
+      <button class="log-filter" data-filter="rx">RX</button>
+    </div>
+
+    <div class="sidebar-body log-body">
+      <div class="log" id="logContainer" aria-live="polite"></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span data-i18n="eventsMsg">Events &amp; messages</span>
+      <span class="badge"><strong>v1.0</strong></span>
+    </div>
+  </aside>
+
+  <!-- Toast -->
+  <div id="toastIndicator" class="toast-indicator">
+    <div class="toast-inner">
+      <div class="spinner"></div>
+      <div id="toastMessage" class="toast-text">Working…</div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="gmail-lab.js"></script>
+</body>
+</html>
