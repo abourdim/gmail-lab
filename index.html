@@ -119,6 +119,31 @@
         </div>
       </details>
 
+      <!-- ═══════════════════ EXPORT ALL INBOX ═══════════════════ -->
+      <details class="collapsible">
+        <summary><span class="icon">💾</span> <span>Export All Inbox</span></summary>
+        <div class="card" style="padding:0.8rem 1rem">
+          <p style="font-size:0.82rem;opacity:0.6;margin-bottom:8px">Export your entire inbox or use Google Takeout for a complete backup.</p>
+          <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px">
+            <button class="btn-sm" onclick="gmailExportAllInbox('csv')" id="exportAllCsvBtn" disabled>💾 All Inbox (CSV)</button>
+            <button class="btn-sm" onclick="gmailExportAllInbox('json')" id="exportAllJsonBtn" disabled>💾 All Inbox (JSON)</button>
+            <button class="btn-sm" onclick="gmailExportAllInbox('txt')" id="exportAllTxtBtn" disabled>💾 All Inbox (TXT)</button>
+          </div>
+          <div id="exportAllProgress" class="gmail-export-progress" style="display:none;margin-top:8px">
+            <div class="gmail-export-bar"><div class="gmail-export-fill" id="exportAllFill"></div></div>
+            <span id="exportAllText">0 / ?</span>
+          </div>
+          <div id="exportAllInfo" style="font-size:0.75rem;opacity:0.5;margin-top:8px"></div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+            <p style="font-size:0.82rem;margin-bottom:6px"><b>For a complete backup (all 20,000+ emails):</b></p>
+            <a href="https://takeout.google.com/settings/takeout/custom/gmail" target="_blank" rel="noopener" class="gmail-takeout-link">
+              <span>📦 Google Takeout — Full Gmail Backup</span>
+              <span style="font-size:0.72rem;opacity:0.6">Official Google tool — exports everything as .mbox file</span>
+            </a>
+          </div>
+        </div>
+      </details>
+
       <!-- ═══════════════════ CONTACT BOOK ═══════════════════ -->
       <details class="collapsible">
         <summary><span class="icon">👥</span> <span data-i18n="sectionContacts">Contact Book</span></summary>
@@ -351,31 +376,6 @@
           <div class="gmail-stats-bar" style="margin-top:8px">
             <button class="btn-sm" onclick="nextShortcutChallenge()">⏭️ Next</button>
             <span id="shortcutScore" class="gmail-stats-status"></span>
-          </div>
-        </div>
-      </details>
-
-      <!-- ═══════════════════ EXPORT ALL INBOX ═══════════════════ -->
-      <details class="collapsible">
-        <summary><span class="icon">💾</span> <span>Export All Inbox</span></summary>
-        <div class="card" style="padding:0.8rem 1rem">
-          <p style="font-size:0.82rem;opacity:0.6;margin-bottom:8px">Export your entire inbox or use Google Takeout for a complete backup.</p>
-          <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px">
-            <button class="btn-sm" onclick="gmailExportAllInbox('csv')" id="exportAllCsvBtn" disabled>💾 All Inbox (CSV)</button>
-            <button class="btn-sm" onclick="gmailExportAllInbox('json')" id="exportAllJsonBtn" disabled>💾 All Inbox (JSON)</button>
-            <button class="btn-sm" onclick="gmailExportAllInbox('txt')" id="exportAllTxtBtn" disabled>💾 All Inbox (TXT)</button>
-          </div>
-          <div id="exportAllProgress" class="gmail-export-progress" style="display:none;margin-top:8px">
-            <div class="gmail-export-bar"><div class="gmail-export-fill" id="exportAllFill"></div></div>
-            <span id="exportAllText">0 / ?</span>
-          </div>
-          <div id="exportAllInfo" style="font-size:0.75rem;opacity:0.5;margin-top:8px"></div>
-          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
-            <p style="font-size:0.82rem;margin-bottom:6px"><b>For a complete backup (all 20,000+ emails):</b></p>
-            <a href="https://takeout.google.com/settings/takeout/custom/gmail" target="_blank" rel="noopener" class="gmail-takeout-link">
-              <span>📦 Google Takeout — Full Gmail Backup</span>
-              <span style="font-size:0.72rem;opacity:0.6">Official Google tool — exports everything as .mbox file</span>
-            </a>
           </div>
         </div>
       </details>

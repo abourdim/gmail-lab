@@ -840,27 +840,52 @@ async function gmailExportAll(format) {
       if (allIds.length >= 2000) { log('⚠️ Capped at 2000', 'info'); break; }
     } while (pageToken);
 
-    // Step 2: Fetch metadata for each
-    log(`📦 Reading metadata for ${allIds.length} emails…`, 'info');
-    for (let i = 0; i < allIds.length; i++) {
+    // Step 2: Fetch metadata in batches of 100
+    log(`📦 Reading metadata for ${allIds.length} emails in batches…`, 'info');
+    const META_BATCH = 100;
+    for (let bs = 0; bs < allIds.length; bs += META_BATCH) {
+      const batchIds = allIds.slice(bs, bs + META_BATCH);
+      const batchNum = Math.floor(bs / META_BATCH) + 1;
+      const totalBatches = Math.ceil(allIds.length / META_BATCH);
       try {
-        const d = await gapi.client.gmail.users.messages.get({
-          userId: 'me', id: allIds[i], format: 'metadata',
-          metadataHeaders: ['From', 'Subject', 'Date']
+        const boundary = 'batch_meta_' + Date.now();
+        let body = '';
+        batchIds.forEach((id, idx) => {
+          body += `--${boundary}\r\nContent-Type: application/http\r\nContent-ID: <m${idx}>\r\n\r\nGET /gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date\r\n\r\n`;
         });
-        const h = d.result.payload.headers;
-        const get = n => (h.find(x => x.name === n) || {}).value || '';
-        allEmails.push({
-          id: allIds[i], from: get('From'), subject: get('Subject'),
-          date: get('Date'), snippet: d.result.snippet,
-          unread: (d.result.labelIds || []).includes('UNREAD')
+        body += `--${boundary}--`;
+        const resp = await fetch('https://www.googleapis.com/batch/gmail/v1', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + gmailAccessToken, 'Content-Type': 'multipart/mixed; boundary=' + boundary },
+          body
         });
-      } catch { allEmails.push({ id: allIds[i], from: '', subject: '(error)', date: '', snippet: '', unread: false }); }
-
-      const pct = Math.min(100, Math.round(((i + 1) / allIds.length) * 100));
+        const text = await resp.text();
+        const rb = text.match(/^--([^\r\n]+)/)?.[1];
+        if (rb) {
+          text.split('--' + rb).slice(1, -1).forEach(part => {
+            try {
+              const json = JSON.parse(part.match(/\{[\s\S]*\}/)?.[0]);
+              if (json.error) { allEmails.push({ id: '', from: '', subject: '(error)', date: '', snippet: '', unread: false }); return; }
+              const h = json.payload?.headers || [];
+              const get = n => (h.find(x => x.name === n) || {}).value || '';
+              allEmails.push({ id: json.id, from: get('From'), subject: get('Subject'), date: get('Date'), snippet: json.snippet, unread: (json.labelIds || []).includes('UNREAD') });
+            } catch { allEmails.push({ id: '', from: '', subject: '(parse error)', date: '', snippet: '', unread: false }); }
+          });
+        }
+      } catch (e) {
+        log(`⚠️ Batch ${batchNum} failed, using fallback…`, 'error');
+        for (const id of batchIds) {
+          try {
+            const d = await gapi.client.gmail.users.messages.get({ userId: 'me', id, format: 'metadata', metadataHeaders: ['From', 'Subject', 'Date'] });
+            const h = d.result.payload.headers; const get = n => (h.find(x => x.name === n) || {}).value || '';
+            allEmails.push({ id, from: get('From'), subject: get('Subject'), date: get('Date'), snippet: d.result.snippet, unread: (d.result.labelIds || []).includes('UNREAD') });
+          } catch { allEmails.push({ id, from: '', subject: '(error)', date: '', snippet: '', unread: false }); }
+        }
+      }
+      const pct = Math.min(100, Math.round((allEmails.length / allIds.length) * 100));
       if (fillEl) fillEl.style.width = pct + '%';
-      if (textEl) textEl.textContent = `${i + 1} / ${allIds.length}`;
-      if ((i + 1) % 25 === 0) await new Promise(r => setTimeout(r, 300));
+      if (textEl) textEl.textContent = `Batch ${batchNum}/${totalBatches} — ${allEmails.length}/${allIds.length}`;
+      if (bs + META_BATCH < allIds.length) await new Promise(r => setTimeout(r, 300));
     }
 
     const ts = new Date().toISOString().slice(0, 10);
@@ -953,35 +978,76 @@ async function gmailExportFull(format) {
       }
     } while (pageToken);
 
-    // Step 2: Fetch full content for each email
-    log(`📄 Reading ${allIds.length} emails…`, 'info');
+    // Step 2: Fetch full content using batch API (50 per batch)
+    log(`📄 Reading ${allIds.length} emails in batches…`, 'info');
     const fullEmails = [];
+    const BATCH_SIZE = 50;
 
-    for (let i = 0; i < allIds.length; i++) {
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          const full = await gmailReadMessage(allIds[i]);
-          fullEmails.push(full);
-          break;
-        } catch (err) {
-          retries--;
-          if (retries > 0) {
-            log(`⚠️ Retry ${3 - retries}/3 for email ${i + 1}…`, 'info');
-            await new Promise(r => setTimeout(r, 2000));
-          } else {
-            fullEmails.push({ from: '', to: '', subject: '(failed after 3 retries)', date: '', body: '', labels: [] });
-            log(`❌ Skipped email ${i + 1}`, 'error');
+    for (let batchStart = 0; batchStart < allIds.length; batchStart += BATCH_SIZE) {
+      const batchIds = allIds.slice(batchStart, batchStart + BATCH_SIZE);
+      const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(allIds.length / BATCH_SIZE);
+
+      try {
+        // Build multipart batch request
+        const boundary = 'batch_gmail_export_' + Date.now();
+        let batchBody = '';
+        batchIds.forEach((id, idx) => {
+          batchBody += `--${boundary}\r\nContent-Type: application/http\r\nContent-ID: <item${idx}>\r\n\r\nGET /gmail/v1/users/me/messages/${id}?format=full\r\n\r\n`;
+        });
+        batchBody += `--${boundary}--`;
+
+        const resp = await fetch('https://www.googleapis.com/batch/gmail/v1', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + gmailAccessToken,
+            'Content-Type': 'multipart/mixed; boundary=' + boundary,
+          },
+          body: batchBody,
+        });
+
+        const responseText = await resp.text();
+        // Parse multipart response
+        const respBoundary = responseText.match(/^--([^\r\n]+)/)?.[1];
+        if (respBoundary) {
+          const parts = responseText.split('--' + respBoundary).slice(1, -1);
+          for (const part of parts) {
+            try {
+              const jsonMatch = part.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) continue;
+              const msg = JSON.parse(jsonMatch[0]);
+              if (msg.error) { fullEmails.push({ from: '', to: '', subject: '(error)', date: '', body: '', labels: [] }); continue; }
+              const headers = msg.payload?.headers || [];
+              const get = n => (headers.find(x => x.name === n) || {}).value || '';
+              let body = '';
+              function extract(p) {
+                if (p.mimeType === 'text/plain' && p.body?.data) body += decodeBase64Utf8(p.body.data);
+                if (p.parts) p.parts.forEach(extract);
+              }
+              extract(msg.payload);
+              if (!body && msg.snippet) body = msg.snippet;
+              fullEmails.push({ from: get('From'), to: get('To'), subject: get('Subject'), date: get('Date'), body, labels: msg.labelIds || [] });
+            } catch { fullEmails.push({ from: '', to: '', subject: '(parse error)', date: '', body: '', labels: [] }); }
           }
+        }
+      } catch (e) {
+        log(`⚠️ Batch ${batchNum} failed: ${e.message}, falling back…`, 'error');
+        // Fallback: individual fetch for this batch
+        for (const id of batchIds) {
+          try {
+            const full = await gmailReadMessage(id);
+            fullEmails.push(full);
+          } catch { fullEmails.push({ from: '', to: '', subject: '(failed)', date: '', body: '', labels: [] }); }
         }
       }
 
-      const pct = 50 + Math.round(((i + 1) / allIds.length) * 50);
+      const pct = 50 + Math.round((fullEmails.length / allIds.length) * 50);
       if (fillEl) fillEl.style.width = pct + '%';
-      if (textEl) textEl.textContent = `Reading: ${i + 1} / ${allIds.length}`;
+      if (textEl) textEl.textContent = `Batch ${batchNum}/${totalBatches} — ${fullEmails.length}/${allIds.length}`;
+      log(`📦 Batch ${batchNum}/${totalBatches}: ${fullEmails.length} emails read`, 'info');
 
-      // Delay every 10 emails to avoid rate limit
-      if ((i + 1) % 10 === 0) await new Promise(r => setTimeout(r, 1000));
+      // Small pause between batches
+      if (batchStart + BATCH_SIZE < allIds.length) await new Promise(r => setTimeout(r, 500));
     }
 
     // Step 3: Download
