@@ -962,10 +962,13 @@ async function gmailExportFull(format) {
   if (!gmailAccessToken) { log('❌ Not signed in', 'error'); return; }
   if (!(await gmailEnsureToken())) return;
 
-  const progressEl = document.getElementById('exportProgress');
-  const fillEl = document.getElementById('exportFill');
-  const textEl = document.getElementById('exportProgressText');
+  // Use export progress from results header, or from Tools sidebar
+  let progressEl = document.getElementById('exportProgress') || document.getElementById('exportAllProgress');
+  let fillEl = document.getElementById('exportFill') || document.getElementById('exportAllFill');
+  let textEl = document.getElementById('exportProgressText') || document.getElementById('exportAllText');
   if (progressEl) progressEl.style.display = 'flex';
+
+  showToast('Starting full export…', 0);
 
   // Step 1: Collect all message IDs
   const allIds = [];
@@ -993,76 +996,31 @@ async function gmailExportFull(format) {
       }
     } while (pageToken);
 
-    // Step 2: Fetch full content using batch API (50 per batch)
-    log(`📄 Reading ${allIds.length} emails in batches…`, 'info');
+    // Step 2: Fetch full content one by one (reliable)
+    log(`📄 Reading ${allIds.length} emails…`, 'info');
     const fullEmails = [];
-    const BATCH_SIZE = 50;
 
-    for (let batchStart = 0; batchStart < allIds.length; batchStart += BATCH_SIZE) {
-      const batchIds = allIds.slice(batchStart, batchStart + BATCH_SIZE);
-      const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(allIds.length / BATCH_SIZE);
-
-      try {
-        // Build multipart batch request
-        const boundary = 'batch_gmail_export_' + Date.now();
-        let batchBody = '';
-        batchIds.forEach((id, idx) => {
-          batchBody += `--${boundary}\r\nContent-Type: application/http\r\nContent-ID: <item${idx}>\r\n\r\nGET /gmail/v1/users/me/messages/${id}?format=full\r\n\r\n`;
-        });
-        batchBody += `--${boundary}--`;
-
-        const resp = await fetch('https://www.googleapis.com/batch/gmail/v1', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + gmailAccessToken,
-            'Content-Type': 'multipart/mixed; boundary=' + boundary,
-          },
-          body: batchBody,
-        });
-
-        const responseText = await resp.text();
-        // Parse multipart response
-        const respBoundary = responseText.match(/^--([^\r\n]+)/)?.[1];
-        if (respBoundary) {
-          const parts = responseText.split('--' + respBoundary).slice(1, -1);
-          for (const part of parts) {
-            try {
-              const jsonMatch = part.match(/\{[\s\S]*\}/);
-              if (!jsonMatch) continue;
-              const msg = JSON.parse(jsonMatch[0]);
-              if (msg.error) { fullEmails.push({ from: '', to: '', subject: '(error)', date: '', body: '', labels: [] }); continue; }
-              const headers = msg.payload?.headers || [];
-              const get = n => (headers.find(x => x.name === n) || {}).value || '';
-              let body = '';
-              function extract(p) {
-                if (p.mimeType === 'text/plain' && p.body?.data) body += decodeBase64Utf8(p.body.data);
-                if (p.parts) p.parts.forEach(extract);
-              }
-              extract(msg.payload);
-              if (!body && msg.snippet) body = msg.snippet;
-              fullEmails.push({ from: get('From'), to: get('To'), subject: get('Subject'), date: get('Date'), body, labels: msg.labelIds || [] });
-            } catch { fullEmails.push({ from: '', to: '', subject: '(parse error)', date: '', body: '', labels: [] }); }
-          }
-        }
-      } catch (e) {
-        log(`⚠️ Batch ${batchNum} failed: ${e.message}, falling back…`, 'error');
-        // Fallback: individual fetch for this batch
-        for (const id of batchIds) {
-          try {
-            const full = await gmailReadMessage(id);
-            fullEmails.push(full);
-          } catch { fullEmails.push({ from: '', to: '', subject: '(failed)', date: '', body: '', labels: [] }); }
+    for (let i = 0; i < allIds.length; i++) {
+      let retries = 2;
+      while (retries > 0) {
+        try {
+          const full = await gmailReadMessage(allIds[i]);
+          fullEmails.push(full);
+          break;
+        } catch {
+          retries--;
+          if (retries > 0) await new Promise(r => setTimeout(r, 1500));
+          else fullEmails.push({ from: '', to: '', subject: '(failed)', date: '', body: '', labels: [] });
         }
       }
 
-      const pct = 50 + Math.round((fullEmails.length / allIds.length) * 50);
+      const pct = 50 + Math.round(((i + 1) / allIds.length) * 50);
       if (fillEl) fillEl.style.width = pct + '%';
-      if (textEl) textEl.textContent = `Batch ${batchNum}/${totalBatches} — ${fullEmails.length}/${allIds.length}`;
-      log(`📦 Batch ${batchNum}/${totalBatches}: ${fullEmails.length} emails read`, 'info');
+      if (textEl) textEl.textContent = `Reading: ${i + 1} / ${allIds.length}`;
+      showToast(`Full export: ${i + 1}/${allIds.length}`, 0);
 
-      // Small pause between batches
-      if (batchStart + BATCH_SIZE < allIds.length) await new Promise(r => setTimeout(r, 500));
+      // Pace: 1s pause every 5 emails
+      if ((i + 1) % 5 === 0) await new Promise(r => setTimeout(r, 1000));
     }
 
     // Step 3: Download
@@ -1084,6 +1042,7 @@ async function gmailExportFull(format) {
 
   if (progressEl) progressEl.style.display = 'none';
   if (fillEl) fillEl.style.width = '0%';
+  hideToast();
 }
 
 /* ═══════ SEARCH HISTORY ═══════ */
