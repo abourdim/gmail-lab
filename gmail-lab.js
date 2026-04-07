@@ -637,6 +637,7 @@ const GMAIL_EXAMPLES = [
   { icon: '📎', label: 'Emails with attachments', query: 'has:attachment newer_than:7d', tip: 'has:attachment' },
   { icon: '⭐', label: 'Starred emails', query: 'is:starred', tip: 'is:starred' },
   { icon: '✉️', label: 'Sent emails', query: 'in:sent', tip: 'in:sent' },
+  { icon: '🔄', label: 'All emails with someone', query: null, tip: 'from:X OR to:X', askInput: true, askPrompt: 'Enter email address or name:', special: 'conversation' },
   { icon: '🏷️', label: 'List my labels', query: null, tip: 'Shows all labels', special: 'labels' },
 ];
 
@@ -660,7 +661,14 @@ function gmailBuildExamples() {
       if (!gmailAccessToken) return;
       playSound('click');
 
-      if (ex.askInput) {
+      if (ex.special === 'conversation') {
+        gmailShowModal(ex.askPrompt, (val) => {
+          if (!val) return;
+          const q = `from:${val} OR to:${val}`;
+          gmailRunSearch(q, 'All emails with: ' + val);
+        });
+        return;
+      } else if (ex.askInput) {
         gmailShowModal(ex.askPrompt, (val) => {
           if (!val) return;
           const q = (ex.prefix || 'from:') + val;
