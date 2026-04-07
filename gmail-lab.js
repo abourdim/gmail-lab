@@ -102,6 +102,11 @@ function gmailEscHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function gmailEscJs(s) {
+  if (!s) return '';
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
+}
+
 function gmailFormatDate(dateStr) {
   if (!dateStr) return '';
   try {
@@ -459,7 +464,7 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
     <div class="gmail-results-header">
       <span class="gmail-results-title">📨 ${gmailEscHtml(title)}</span>
       <span class="gmail-results-stats" id="resultsStats">${statsText}</span>
-      <button class="gmail-save-result-btn" onclick="saveSearch('${gmailEscHtml(query||'').replace(/'/g,"\\'")}','${gmailEscHtml(title||'').replace(/'/g,"\\'")}')" title="Save this search">⭐</button>
+      <button class="gmail-save-result-btn" onclick="saveSearch('${')+gmailEscJs(query||'')+'}','${gmailEscHtml(title||'').replace(/'/g,"\\'")}')" title="Save this search">⭐</button>
       <div class="gmail-export-wrap">
         <button class="gmail-export-btn" onclick="toggleExportMenu()">⬇️ Export</button>
         <div class="gmail-export-menu" id="exportMenu" style="display:none">
@@ -822,7 +827,7 @@ async function gmailExportAll(format) {
   const menu = document.getElementById('exportMenu');
   if (menu) menu.style.display = 'none';
 
-  if (!gmailAccessToken || !gmailLastQuery && gmailLastQuery !== '') {
+  if (!gmailAccessToken) {
     log('❌ No search to export', 'error');
     return;
   }
@@ -1328,9 +1333,20 @@ function gmailExportContacts(format) {
   log(`👥 Exported ${extractedContacts.length} contacts as ${format.toUpperCase()}`, 'success');
 }
 
+/* ═══════ INSIGHT CONCURRENCY GUARD ═══════ */
+
+let insightRunning = false;
+function insightGuard() {
+  if (insightRunning) { showToast('Another analysis is running…', 2000); return false; }
+  insightRunning = true;
+  return true;
+}
+function insightDone() { insightRunning = false; }
+
 /* ═══════ EMAIL STATS DASHBOARD ═══════ */
 
 async function gmailBuildStats() {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
 
@@ -1453,6 +1469,7 @@ async function gmailBuildStats() {
   }
 
   if (btn) btn.disabled = false;
+  insightDone();
   if (status) status.textContent = '';
 }
 
@@ -1806,6 +1823,7 @@ async function gmailScanAttachments() {
     if (eb) eb.disabled = false;
   } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
   if (btn) btn.disabled = false;
+  insightDone();
   if (status) status.textContent = '';
 }
 
@@ -1838,6 +1856,7 @@ function exportAttachmentList() {
 /* ═══════ WORD CLOUD ═══════ */
 
 async function gmailBuildWordCloud() {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
   const btn = document.getElementById('wordCloudBtn');
@@ -1884,12 +1903,14 @@ async function gmailBuildWordCloud() {
     playSound('success');
   } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
   if (btn) btn.disabled = false;
+  insightDone();
   if (status) status.textContent = '';
 }
 
 /* ═══════ EMAIL DIGEST ═══════ */
 
 async function gmailBuildDigest(period) {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
   const container = document.getElementById('digestContainer');
@@ -1966,6 +1987,7 @@ async function bulkCopy(type) {
 /* ═══════ EMAIL SIZE ANALYZER ═══════ */
 
 async function gmailAnalyzeSize() {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
   const btn = document.getElementById('sizeBtn');
@@ -2027,12 +2049,14 @@ async function gmailAnalyzeSize() {
     playSound('success');
   } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
   if (btn) btn.disabled = false;
+  insightDone();
   if (status) status.textContent = '';
 }
 
 /* ═══════ INBOX SCORE ═══════ */
 
 async function gmailCalcInboxScore() {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
   const btn = document.getElementById('scoreBtn');
@@ -2091,6 +2115,7 @@ async function gmailCalcInboxScore() {
     playSound('success');
   } catch (e) { log('❌ ' + (e.message || ''), 'error'); if (container) container.innerHTML = ''; }
   if (btn) btn.disabled = false;
+  insightDone();
 }
 
 /* ═══════ GMAIL SHORTCUTS TRAINER ═══════ */
@@ -2355,6 +2380,7 @@ function printEmail() {
 /* ═══════ EMAIL TIMELINE ═══════ */
 
 async function gmailBuildTimeline() {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
   const btn = document.getElementById('timelineBtn');
@@ -2416,7 +2442,8 @@ async function gmailBuildTimeline() {
       container.innerHTML = `<div class="timeline-chart">${months.map(([m, c]) => {
         const pct = (c / maxVal * 100).toFixed(0);
         const label = m.split('-');
-        return `<div class="timeline-bar-wrap" onclick="gmailRunSearch('after:${label[0]}/${label[1]}/01 before:${label[0]}/${String(Number(label[1])+1).padStart(2,'0')}/01','${m}')" title="${m}: ${c} emails">
+        const nextMonth = Number(label[1]) === 12 ? `${Number(label[0])+1}/01` : `${label[0]}/${String(Number(label[1])+1).padStart(2,'0')}`;
+        return `<div class="timeline-bar-wrap" onclick="gmailRunSearch('after:${label[0]}/${label[1]}/01 before:${nextMonth}/01','${m}')" title="${m}: ${c} emails">
           <div class="timeline-bar" style="height:${pct}%"></div>
           <span class="timeline-label">${label[1]}/${label[0].slice(2)}</span>
         </div>`;
@@ -2426,12 +2453,14 @@ async function gmailBuildTimeline() {
     playSound('success');
   } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
   if (btn) btn.disabled = false;
+  insightDone();
   if (status) status.textContent = '';
 }
 
 /* ═══════ SENDER NETWORK GRAPH ═══════ */
 
 async function gmailBuildNetwork() {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
   const btn = document.getElementById('networkBtn');
@@ -2515,11 +2544,13 @@ async function gmailBuildNetwork() {
     playSound('success');
   } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
   if (btn) btn.disabled = false;
+  insightDone();
 }
 
 /* ═══════ DUPLICATE FINDER ═══════ */
 
 async function gmailFindDuplicates() {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
   const btn = document.getElementById('dupeBtn');
@@ -2598,12 +2629,14 @@ async function gmailFindDuplicates() {
     playSound('success');
   } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
   if (btn) btn.disabled = false;
+  insightDone();
   if (status) status.textContent = '';
 }
 
 /* ═══════ AUTO-CATEGORIZER ═══════ */
 
 async function gmailAutoCategorize() {
+  if (!insightGuard()) return;
   if (!gmailAccessToken) return;
   if (!(await gmailEnsureToken())) return;
   const btn = document.getElementById('catBtn');
@@ -2691,6 +2724,7 @@ async function gmailAutoCategorize() {
     playSound('success');
   } catch (e) { log('❌ ' + (e.message || ''), 'error'); }
   if (btn) btn.disabled = false;
+  insightDone();
   if (status) status.textContent = '';
 }
 
