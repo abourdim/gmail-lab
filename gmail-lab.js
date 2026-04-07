@@ -335,18 +335,9 @@ async function gmailLoadStats() {
 
 async function gmailCheckUnread() {
   try {
-    // Get exact unread count by paginating IDs
-    let unreadCount = 0;
-    let pageToken = null;
-    do {
-      const p = { userId: 'me', q: 'is:unread', maxResults: 500 };
-      if (pageToken) p.pageToken = pageToken;
-      const r = await gapi.client.gmail.users.messages.list(p);
-      unreadCount += (r.result.messages || []).length;
-      pageToken = r.result.nextPageToken;
-      // Cap at 500 for speed — enough to show the real picture
-      if (unreadCount >= 500) { unreadCount = '500+'; break; }
-    } while (pageToken);
+    // Use INBOX label to get Gmail's real unread count
+    const r = await gapi.client.gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
+    const unreadCount = r.result.messagesUnread || 0;
 
     if (unreadCount > 0) {
       const el = document.getElementById('gmailStats');
