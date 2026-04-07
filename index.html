@@ -148,16 +148,27 @@
 
     </div><!-- end rows-container -->
 
+    <!-- ═══════════════════ SEARCH HISTORY (on main page) ═══════════════════ -->
+    <div class="card" style="padding:0.8rem 1rem;margin:0 4px">
+      <div class="gmail-history-tabs" style="margin-bottom:6px">
+        <span style="font-size:0.82rem;opacity:0.6;margin-inline-end:auto">🕐 Search History</span>
+        <button class="gmail-htab active" onclick="showHistoryTab('recent')">Recent</button>
+        <button class="gmail-htab" onclick="showHistoryTab('saved')">⭐ Saved</button>
+      </div>
+      <div id="historyRecent" class="gmail-history-list"></div>
+      <div id="historySaved" class="gmail-history-list" style="display:none"></div>
+    </div>
+
+    <!-- ═══════════════════ FOOTER ═══════════════════ -->
+    <footer class="app-footer" style="margin-bottom:70px">
+      <span class="footer-text">powered by <a href="https://workshop-diy.org" target="_blank" rel="noopener">workshop-diy.org</a></span>
+      <span class="hijri-date" id="hijriDate"></span>
+    </footer>
+
     <!-- ═══════════════════ FLOATING QUICK COMMANDS BAR ═══════════════════ -->
     <div class="quick-bar" id="quickBar">
       <div class="quick-bar-inner" id="exampleButtons"></div>
     </div>
-
-    <!-- ═══════════════════ FOOTER ═══════════════════ -->
-    <footer class="app-footer">
-      <span class="footer-text">powered by <a href="https://workshop-diy.org" target="_blank" rel="noopener">workshop-diy.org</a></span>
-      <span class="hijri-date" id="hijriDate"></span>
-    </footer>
 
     <div class="deco-band bottom-band" aria-hidden="true"></div>
   </div><!-- end .app -->
@@ -218,12 +229,7 @@
         <button class="btn-sm" onclick="drSearch()" style="background:var(--accent);color:#fff;margin-top:6px;width:100%">🔍 Search</button>
 
         <h4 class="tools-section">🕐 Search History</h4>
-        <div class="gmail-history-tabs">
-          <button class="gmail-htab active" onclick="showHistoryTab('recent')">🕐 Recent</button>
-          <button class="gmail-htab" onclick="showHistoryTab('saved')">⭐ Saved</button>
-        </div>
-        <div id="historyRecent" class="gmail-history-list"></div>
-        <div id="historySaved" class="gmail-history-list" style="display:none"></div>
+        <p style="font-size:0.78rem;opacity:0.5">Search history is on the main page (scroll down).</p>
       </div>
 
       <!-- 📊 INSIGHTS TAB -->
