@@ -466,6 +466,12 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
             <button onclick="gmailExportAll('json')">JSON</button>
             <button onclick="gmailExportAll('txt')">TXT</button>
           </div>
+          <div class="gmail-export-group">
+            <div class="gmail-export-label">📄 Full content (slower)</div>
+            <button onclick="gmailExportFull('csv')">CSV</button>
+            <button onclick="gmailExportFull('json')">JSON</button>
+            <button onclick="gmailExportFull('txt')">TXT</button>
+          </div>
         </div>
       </div>
       <button class="gmail-results-close" onclick="this.closest('.gmail-results').remove()">✕</button>
@@ -834,6 +840,118 @@ async function gmailExportAll(format) {
     log(`📊 Exported ALL ${allEmails.length} emails as ${format.toUpperCase()}`, 'success');
   } catch (e) {
     log('❌ Export failed: ' + (e.message || ''), 'error');
+  }
+
+  if (progressEl) progressEl.style.display = 'none';
+  if (fillEl) fillEl.style.width = '0%';
+}
+
+/* ═══════ FULL CONTENT EXPORT ═══════ */
+
+function fullEmailToCsv(emails) {
+  const header = 'From,To,Subject,Date,Labels,Body';
+  const rows = emails.map(e => {
+    const esc = s => '"' + (s || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"';
+    return [esc(e.from), esc(e.to), esc(e.subject), esc(e.date), esc((e.labels||[]).join('; ')), esc(e.body)].join(',');
+  });
+  return header + '\n' + rows.join('\n');
+}
+
+function fullEmailToJson(emails) {
+  return JSON.stringify(emails.map(e => ({
+    from: e.from, to: e.to, subject: e.subject, date: e.date,
+    labels: e.labels, body: e.body
+  })), null, 2);
+}
+
+function fullEmailToTxt(emails) {
+  return emails.map((e, i) => {
+    return `════════════════════════════════════════\n` +
+      `Email ${i + 1}\n` +
+      `════════════════════════════════════════\n` +
+      `From:    ${e.from}\n` +
+      `To:      ${e.to}\n` +
+      `Subject: ${e.subject}\n` +
+      `Date:    ${e.date}\n` +
+      `Labels:  ${(e.labels||[]).join(', ')}\n` +
+      `────────────────────────────────────────\n\n` +
+      `${e.body || '(no content)'}\n`;
+  }).join('\n\n');
+}
+
+async function gmailExportFull(format) {
+  const menu = document.getElementById('exportMenu');
+  if (menu) menu.style.display = 'none';
+
+  if (!gmailAccessToken) { log('❌ Not signed in', 'error'); return; }
+  if (!(await gmailEnsureToken())) return;
+
+  const progressEl = document.getElementById('exportProgress');
+  const fillEl = document.getElementById('exportFill');
+  const textEl = document.getElementById('exportProgressText');
+  if (progressEl) progressEl.style.display = 'flex';
+
+  // Step 1: Collect all message IDs
+  const allIds = [];
+  let pageToken = null;
+  const estimate = gmailTotalFound || 100;
+
+  log(`📄 Fetching all message IDs for full export…`, 'info');
+
+  try {
+    do {
+      const listParams = { userId: 'me', q: gmailLastQuery, maxResults: 500 };
+      if (pageToken) listParams.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(listParams);
+      const msgs = r.result.messages || [];
+      allIds.push(...msgs.map(m => m.id));
+      pageToken = r.result.nextPageToken;
+
+      const pct = Math.min(50, Math.round((allIds.length / estimate) * 50));
+      if (fillEl) fillEl.style.width = pct + '%';
+      if (textEl) textEl.textContent = `IDs: ${allIds.length} / ~${estimate}`;
+
+      if (allIds.length >= 500) {
+        log(`⚠️ Full export capped at 500 emails (API rate protection)`, 'info');
+        break;
+      }
+    } while (pageToken);
+
+    // Step 2: Fetch full content for each email
+    log(`📄 Reading ${allIds.length} emails…`, 'info');
+    const fullEmails = [];
+
+    for (let i = 0; i < allIds.length; i++) {
+      try {
+        const full = await gmailReadMessage(allIds[i]);
+        fullEmails.push(full);
+      } catch {
+        fullEmails.push({ from: '', to: '', subject: '(failed to read)', date: '', body: '', labels: [] });
+      }
+
+      const pct = 50 + Math.round(((i + 1) / allIds.length) * 50);
+      if (fillEl) fillEl.style.width = pct + '%';
+      if (textEl) textEl.textContent = `Reading: ${i + 1} / ${allIds.length}`;
+
+      // Small delay every 20 emails to avoid rate limit
+      if ((i + 1) % 20 === 0) await new Promise(r => setTimeout(r, 500));
+    }
+
+    // Step 3: Download
+    const ts = new Date().toISOString().slice(0, 10);
+    const prefix = `gmail-FULL-${gmailLastTitle.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${ts}`;
+
+    if (format === 'csv') {
+      downloadFile(fullEmailToCsv(fullEmails), `${prefix}.csv`, 'text/csv');
+    } else if (format === 'json') {
+      downloadFile(fullEmailToJson(fullEmails), `${prefix}.json`, 'application/json');
+    } else {
+      downloadFile(fullEmailToTxt(fullEmails), `${prefix}.txt`, 'text/plain');
+    }
+    log(`📄 Exported ${fullEmails.length} emails with full content as ${format.toUpperCase()}`, 'success');
+
+  } catch (e) {
+    log('❌ Full export failed: ' + (e.message || ''), 'error');
   }
 
   if (progressEl) progressEl.style.display = 'none';
