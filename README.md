@@ -1,12 +1,14 @@
 # 📧 Gmail Lab — Workshop DIY
 
-**Learn to search and explore Gmail — connect your own Google account!**
+**Search, analyze, and explore your Gmail inbox — privacy-first, no server, open source.**
 
-A fun, kid-friendly educational web app built on the [Workshop-DIY](https://workshop-diy.org) template. Each user signs in with their **own** Google account and gets read-only access to their Gmail inbox.
+A feature-rich educational web app built on the [Workshop-DIY](https://workshop-diy.org) template. Each user signs in with their **own** Google account and gets read-only access to their Gmail inbox.
 
-![Version](https://img.shields.io/badge/version-1.0-blue)
+![Version](https://img.shields.io/badge/version-2.0-blue)
 ![License](https://img.shields.io/badge/license-Workshop--DIY-orange)
 ![No Frameworks](https://img.shields.io/badge/dependencies-none-brightgreen)
+
+**[Live Demo](https://abourdim.github.io/gmail-lab/)**
 
 ---
 
@@ -16,9 +18,10 @@ A fun, kid-friendly educational web app built on the [Workshop-DIY](https://work
 - **Google OAuth2** — each user signs in with their own Google account
 - **Read-only access** — cannot modify, delete, or send emails
 - **Direct API** — emails go from Google → browser, no middleman
-- **Sign out anytime** — revokes access token
+- **Auto sign-in** — silent re-authentication on page reload
+- **Sign out anytime** — revokes access token immediately
 
-### 🚀 Quick Commands (Tap to Run!)
+### 🚀 Quick Commands (9 built-in)
 | Command | What It Does | Gmail Syntax |
 |---------|-------------|--------------|
 | 📬 Unread emails | Lists unread messages | `is:unread` |
@@ -28,23 +31,76 @@ A fun, kid-friendly educational web app built on the [Workshop-DIY](https://work
 | 📎 Attachments | Emails with files (7 days) | `has:attachment` |
 | ⭐ Starred | Starred messages | `is:starred` |
 | ✉️ Sent | Your sent emails | `in:sent` |
+| 🔄 All with someone | Sent + received | `from:X OR to:X` |
 | 🏷️ Labels | Lists all labels | _(labels API)_ |
 
-### 💬 Ask Anything
-Free-form search input — type any Gmail search query and see results live.
+### 🔧 Filter Builder
+Visual query builder — fill in From, To, Subject, dates, and checkboxes. The app builds the Gmail syntax for you.
 
-### 📋 Cheat Sheet
-Built-in Gmail search syntax reference with combinable operators.
+### 📅 Date Range Search
+Calendar date pickers with preset buttons: Today, This Week, This Month, 3 Months, This Year.
+
+### ⬇️ Export (3 modes)
+- **Export loaded** — fast, metadata only (From, Subject, Date, Snippet)
+- **Export all** — fetches all matching emails with pagination + progress bar
+- **Full content** — includes complete email body (slower, capped at 500)
+- **Formats**: CSV, JSON, TXT
+
+### 📊 Email Stats Dashboard
+Analyzes 500 recent emails:
+- Overview: total, unread, starred, unique senders
+- Top 10 senders (bar chart)
+- Emails by day of week
+- Busiest hours (24-hour histogram)
+
+### ☁️ Word Cloud
+Generates a visual word cloud from email subjects. Click any word to search. Sized and colored by frequency.
+
+### 📰 Email Digest
+Summary for Today, This Week, or This Month: totals, unread, starred, top senders.
+
+### 📎 Attachment Manager
+Scans emails with attachments. Lists every file with name, type, size, sender, date. Sort, filter, export.
+
+### 👥 Contact Book
+Auto-extracts unique senders and recipients from 500 emails. Shows frequency, search button per contact, export as CSV/JSON.
+
+### 🕐 Search History & Saved
+- Auto-tracks last 50 searches
+- Bookmark favorites with ⭐
+- One-click re-run
+- Persists across sessions
+
+### 📝 Email Templates
+Pre-written responses (Professional, Polite, Decline) with one-click copy. Add and save your own custom templates.
+
+### 📋 Bulk Clipboard
+Copy all subjects, senders, snippets, or full data from search results in one click.
+
+### 📦 Email Size Analyzer
+Size distribution chart, heaviest emails list, total storage used, average email size.
+
+### 🏆 Inbox Score
+Gamified 0-100 health score based on unread ratio, labels, stars, organization. Includes improvement tips.
+
+### ⌨️ Gmail Shortcuts Trainer
+Interactive quiz on 20 Gmail keyboard shortcuts. Auto-advances, tracks your score.
+
+### 🧠 Gmail Search Quiz
+10 multiple-choice questions testing Gmail search syntax knowledge. Score with emoji feedback.
+
+### 💡 Tip of the Day
+20 Gmail power-user tips, random on each load, refreshable.
 
 ### 🎨 Workshop-DIY Template Features
-- **9 themes** — Mosque Gold, Zellige, Andalus, Riad, Medina, Space, Jungle, Robot + hidden Retro
-- **3 languages** — English 🇬🇧, Français 🇫🇷, العربية 🇩🇿 (with auto RTL)
-- **Activity Log** — timestamped, color-coded, filterable (Info/✓/✗/TX/RX)
+- **9 themes** — 6 dark + 2 light + hidden Retro (Konami code)
+- **3 languages** — English, Francais, العربية (auto RTL)
+- **Activity Log** — timestamped, color-coded, filterable, exportable
 - **Sound effects** — click, success, error tones
 - **Easter eggs** — Konami code, Matrix rain, Morse code
-- **Magic features** — Whisper mode, breathing guide, pixel pet, night mode
-- **PWA ready** — manifest.json, theme-color, touch icons
+- **PWA ready** — manifest.json, theme-color
 - **Fully accessible** — keyboard nav, ARIA labels, focus traps
+- **Offline detection** — graceful banner when offline
 
 ---
 
@@ -57,27 +113,18 @@ cd gmail-lab
 ```
 
 ### 2. Get a Google OAuth Client ID (free)
-1. Go to [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
-2. Create a project (or select existing)
-3. Click **"+ CREATE CREDENTIALS"** → **"OAuth client ID"**
-4. Application type: **"Web application"**
-5. Under **"Authorized JavaScript origins"**, add your URL:
-   - For local dev: `http://localhost:8080`
-   - For GitHub Pages: `https://yourusername.github.io`
-6. Click **"Create"** and copy the **Client ID**
-7. Go to [API Library → Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) and click **"Enable"**
-8. Under **OAuth consent screen**, add your Google email as a **Test user**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a project → name it "Gmail Lab"
+3. Go to **Audience** → User type: External → Add your email as Test user
+4. Go to **Clients** → **+ CREATE CREDENTIALS** → **OAuth client ID**
+5. Type: **Web application** → name: "Gmail Lab"
+6. **Authorized JavaScript origins**: add `http://localhost:8080` and your deploy URL
+7. Click **Create** → copy the **Client ID**
+8. Go to [API Library → Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) → **Enable**
 
 ### 3. Serve locally
 ```bash
-# Python
 python3 -m http.server 8080
-
-# Node.js
-npx serve -p 8080
-
-# PHP
-php -S localhost:8080
 ```
 
 ### 4. Open & Connect
@@ -92,11 +139,11 @@ php -S localhost:8080
 
 ```
 gmail-lab/
-├── index.html          ← Main app (Workshop-DIY 3-panel layout)
-├── script.js           ← Template engine (themes, i18n, log, panels, easter eggs)
-├── gmail-lab.js        ← Gmail logic (OAuth, API calls, example buttons)
+├── index.html          ← Main app (all sections & panels)
+├── script.js           ← Template engine (themes, i18n, log, panels)
+├── gmail-lab.js        ← Gmail logic (OAuth, API, all features)
 ├── style.css           ← Template styles (9 themes, responsive, RTL)
-├── gmail-lab.css       ← Gmail-specific styles (auth, email cards, search)
+├── gmail-lab.css       ← Gmail-specific styles
 ├── manifest.json       ← PWA manifest
 ├── README.md           ← This file
 └── CHANGES.md          ← Changelog
@@ -106,22 +153,30 @@ gmail-lab/
 
 ## 🔒 Privacy & Security
 
-- **Read-only scope** (`gmail.readonly`) — app cannot modify, delete, or send emails
-- **No server** — all API calls go directly from the user's browser to Google
-- **No tracking** — no analytics, no cookies (except `localStorage` for preferences)
-- **No data stored** — emails are displayed in-browser and never persisted
+- **Read-only scope** (`gmail.readonly`) — cannot modify, delete, or send emails
+- **No server** — all API calls go directly from browser to Google
+- **No tracking** — no analytics, no cookies (only `localStorage` for preferences)
+- **No data stored** — emails are fetched live and never persisted
 - **Revocable** — sign out revokes the OAuth token immediately
 - **Each user authenticates independently** — no shared credentials
+- **Open source** — inspect every line of code
 
 ---
 
-## 🌐 Deploy to GitHub Pages
+## ⚠️ Common Issues
 
-1. Push to GitHub
-2. Go to repo **Settings → Pages**
-3. Set source to **main branch**
-4. Your app will be at `https://yourusername.github.io/gmail-lab/`
-5. Add this URL to your Google Cloud **Authorized JavaScript origins**
+| Problem | Solution |
+|---------|----------|
+| "Access blocked" | Add your email as Test user in OAuth consent screen |
+| "Google hasn't verified" | Click "Continue" — normal for testing mode |
+| "Error 400: redirect_uri_mismatch" | Add your exact URL to Authorized JavaScript origins |
+| "Error 401: invalid_client" | Wrong Client ID — click "Change Client ID" and paste the correct one |
+| Token expires after 1 hour | App auto-refreshes. If it fails, click Sign In again |
+| "popup_closed_by_user" | Click Sign In again and complete the flow |
+| Export stops at 77/201 | Fixed in v1.1 — update to latest version |
+| Works locally but not on GitHub Pages | Add `https://yourusername.github.io` to authorized origins |
+
+See the **Wiki tab** in the Help panel for a complete troubleshooting guide.
 
 ---
 
@@ -137,7 +192,7 @@ gmail-lab/
 | Robot | Blue & orange | Dark |
 | **Riad** | Terracotta & ivory | **Light** |
 | **Medina** | Teal & pearl | **Light** |
-| **🕹️ Retro** | Green phosphor CRT | **Dark** (hidden — Konami code) |
+| **Retro** | Green phosphor CRT | **Hidden** (Konami code) |
 
 ---
 

@@ -431,29 +431,119 @@
 
     <div class="sidebar-body">
       <div class="help-content active" id="helpFaq">
+        <h4 style="color:var(--accent);margin-bottom:8px">Getting Started</h4>
         <details class="help-item">
-          <summary data-i18n="faq_q1">What is Gmail Lab?</summary>
-          <p data-i18n="faq_a1">Gmail Lab lets you explore your Gmail inbox — search, read, and learn Gmail search syntax in a fun way!</p>
+          <summary>What is Gmail Lab?</summary>
+          <p>Gmail Lab is a privacy-first educational app that connects to your Gmail via Google's official API. Search, read, analyze, and export your emails — all from your browser with no server in between.</p>
         </details>
         <details class="help-item">
-          <summary data-i18n="faq_q2">How do I connect?</summary>
-          <p data-i18n="faq_a2">Enter your Google OAuth Client ID, then click "Sign in with Google". You need a free Google Cloud project.</p>
+          <summary>How do I connect my Gmail?</summary>
+          <p>1) Create a free Google Cloud project. 2) Enable Gmail API. 3) Create an OAuth Client ID. 4) Paste it in the app and click "Sign in with Google". See the Setup section or Wiki for a detailed guide.</p>
         </details>
         <details class="help-item">
-          <summary data-i18n="faq_q3">Is it safe?</summary>
-          <p data-i18n="faq_a3">Yes! The app uses read-only access — it cannot modify, delete, or send emails. Everything stays in your browser.</p>
+          <summary>Is it safe? Can it read/delete my emails?</summary>
+          <p>The app uses <b>read-only</b> access (<code>gmail.readonly</code>). It can <b>never</b> modify, delete, or send emails. All data stays in your browser. Sign out anytime to revoke access.</p>
         </details>
         <details class="help-item">
-          <summary data-i18n="faq_q4">Can anyone use it?</summary>
-          <p data-i18n="faq_a4">Yes! Each user signs in with their own Google account. No data is shared between users.</p>
+          <summary>Why do I need a Client ID?</summary>
+          <p>Google requires each app to identify itself via OAuth. Your Client ID tells Google "this is Gmail Lab requesting access." It's free and takes 5 minutes to set up.</p>
+        </details>
+        <details class="help-item">
+          <summary>Why does it ask me to sign in again after reload?</summary>
+          <p>The app attempts silent re-authentication. If it fails (cookies cleared, token expired), you'll need to click Sign In again. No data is lost.</p>
+        </details>
+
+        <h4 style="color:var(--accent);margin:12px 0 8px">Features</h4>
+        <details class="help-item">
+          <summary>What are Quick Commands?</summary>
+          <p>Pre-built search buttons: unread emails, from someone, latest email, by subject, attachments, starred, sent, all emails with someone, and labels. One tap to run!</p>
+        </details>
+        <details class="help-item">
+          <summary>How does Export work?</summary>
+          <p>After a search, click the Export button. Three options: <b>Export loaded</b> (fast, metadata only), <b>Export all</b> (fetches all matching emails), <b>Full content</b> (includes email body, slower). Formats: CSV, JSON, TXT.</p>
+        </details>
+        <details class="help-item">
+          <summary>What is the Filter Builder?</summary>
+          <p>A visual form to build Gmail search queries without knowing the syntax. Fill in From, To, Subject, dates, and checkboxes — the app builds the query for you.</p>
+        </details>
+        <details class="help-item">
+          <summary>What does Contact Book do?</summary>
+          <p>Scans your last 500 emails and extracts all unique senders and recipients. Shows frequency, lets you search all emails with any contact, and export as CSV/JSON.</p>
+        </details>
+        <details class="help-item">
+          <summary>How does the Stats Dashboard work?</summary>
+          <p>Analyzes 500 recent emails and shows: top 10 senders (bar chart), emails by day of week, busiest hours (histogram), plus unread/starred/sender counts.</p>
+        </details>
+        <details class="help-item">
+          <summary>What is the Word Cloud?</summary>
+          <p>Scans email subjects and generates a visual word cloud. Bigger words = more frequent. Click any word to search all emails with that subject keyword.</p>
+        </details>
+        <details class="help-item">
+          <summary>What is the Inbox Score?</summary>
+          <p>A fun 0-100 health score based on your unread ratio, number of labels, starred emails, and thread organization. Includes tips to improve!</p>
+        </details>
+        <details class="help-item">
+          <summary>How does the Attachment Manager work?</summary>
+          <p>Scans emails with attachments and lists every file: name, type, size, sender, date. Sort by size/name/date/sender, filter, and export the list.</p>
+        </details>
+        <details class="help-item">
+          <summary>What are Email Templates?</summary>
+          <p>Pre-written response templates (Professional, Polite, Decline) you can copy with one click. You can also create and save your own custom templates.</p>
+        </details>
+        <details class="help-item">
+          <summary>What are Saved Searches?</summary>
+          <p>Every search is saved in your history (last 50). Click ⭐ to bookmark a search for quick re-use. History and bookmarks persist across sessions.</p>
+        </details>
+
+        <h4 style="color:var(--accent);margin:12px 0 8px">Technical</h4>
+        <details class="help-item">
+          <summary>Where is my data stored?</summary>
+          <p>Settings, Client ID, search history, saved searches, and custom templates are stored in your browser's <code>localStorage</code>. Emails are never stored — they're fetched live from Gmail and displayed temporarily.</p>
+        </details>
+        <details class="help-item">
+          <summary>Why is export limited to 500-2000 emails?</summary>
+          <p>Google's API has rate limits. Fetching too many emails too fast causes throttling. The caps protect your account from being temporarily blocked.</p>
+        </details>
+        <details class="help-item">
+          <summary>Can I use my own Jitsi/Gmail server?</summary>
+          <p>Gmail Lab works with the standard Gmail API. For Google Workspace accounts, your admin may need to allow the app. The OAuth setup is the same.</p>
+        </details>
+        <details class="help-item">
+          <summary>Does it work offline?</summary>
+          <p>The app detects offline status and shows a banner. Gmail features require internet, but settings, templates, and the quiz work offline.</p>
         </details>
       </div>
 
       <div class="help-content" id="helpHowto">
-        <div class="help-step"><span class="help-step-num">1</span><p data-i18n="howto_1">Get a Google OAuth Client ID (see Setup section).</p></div>
-        <div class="help-step"><span class="help-step-num">2</span><p data-i18n="howto_2">Paste your Client ID and click "Sign in with Google".</p></div>
-        <div class="help-step"><span class="help-step-num">3</span><p data-i18n="howto_3">Tap any Quick Command button to search your inbox.</p></div>
-        <div class="help-step"><span class="help-step-num">4</span><p data-i18n="howto_4">Click any email in the results to read the full message.</p></div>
+        <h4 style="color:var(--accent);margin-bottom:8px">Getting Started</h4>
+        <div class="help-step"><span class="help-step-num">1</span><p>Get a Google OAuth Client ID — see the Setup section at the bottom of the app, or the Wiki tab for a detailed guide.</p></div>
+        <div class="help-step"><span class="help-step-num">2</span><p>Paste your Client ID in the app and click <b>"Sign in with Google"</b>. Accept the permissions (read-only access).</p></div>
+        <div class="help-step"><span class="help-step-num">3</span><p>Tap any <b>Quick Command</b> button to instantly search your inbox. Try "Show my unread emails" first!</p></div>
+        <div class="help-step"><span class="help-step-num">4</span><p>Click any email in the results to <b>read the full message</b>.</p></div>
+
+        <h4 style="color:var(--accent);margin:12px 0 8px">Search & Filter</h4>
+        <div class="help-step"><span class="help-step-num">5</span><p>Use <b>Ask Anything</b> to type any Gmail search query (e.g. <code>from:mom is:unread</code>).</p></div>
+        <div class="help-step"><span class="help-step-num">6</span><p>Use <b>Filter Builder</b> to visually build a search — fill in the fields and click Search.</p></div>
+        <div class="help-step"><span class="help-step-num">7</span><p>Use <b>Date Range Search</b> with calendar pickers or preset buttons (Today, This Week, etc.).</p></div>
+
+        <h4 style="color:var(--accent);margin:12px 0 8px">Export & Data</h4>
+        <div class="help-step"><span class="help-step-num">8</span><p>After a search, click <b>Export</b> in the results header. Choose loaded/all/full content, then CSV/JSON/TXT.</p></div>
+        <div class="help-step"><span class="help-step-num">9</span><p>Use <b>Contact Book → Extract Contacts</b> to scan your emails for unique senders/recipients.</p></div>
+        <div class="help-step"><span class="help-step-num">10</span><p>Use <b>Attachment Manager → Scan</b> to find all files across your emails.</p></div>
+
+        <h4 style="color:var(--accent);margin:12px 0 8px">Analytics</h4>
+        <div class="help-step"><span class="help-step-num">11</span><p>Open <b>Stats Dashboard → Analyze Inbox</b> to see top senders, busiest days, and email patterns.</p></div>
+        <div class="help-step"><span class="help-step-num">12</span><p>Open <b>Word Cloud → Generate</b> to visualize your most common email topics.</p></div>
+        <div class="help-step"><span class="help-step-num">13</span><p>Open <b>Email Digest</b> to get a summary for today, this week, or this month.</p></div>
+        <div class="help-step"><span class="help-step-num">14</span><p>Open <b>Inbox Score → Calculate</b> to see your inbox health and get improvement tips.</p></div>
+        <div class="help-step"><span class="help-step-num">15</span><p>Open <b>Size Analyzer → Analyze</b> to find which emails are using the most storage.</p></div>
+
+        <h4 style="color:var(--accent);margin:12px 0 8px">Productivity & Learning</h4>
+        <div class="help-step"><span class="help-step-num">16</span><p>Use <b>Email Templates</b> to copy pre-written responses. Add your own custom templates too.</p></div>
+        <div class="help-step"><span class="help-step-num">17</span><p>Use <b>Bulk Clipboard</b> to copy all subjects/senders/snippets from search results at once.</p></div>
+        <div class="help-step"><span class="help-step-num">18</span><p>Check <b>Search History & Saved</b> to re-run past searches or bookmark favorites with ⭐.</p></div>
+        <div class="help-step"><span class="help-step-num">19</span><p>Take the <b>Gmail Search Quiz</b> to test your knowledge of Gmail search operators.</p></div>
+        <div class="help-step"><span class="help-step-num">20</span><p>Practice with the <b>Shortcuts Trainer</b> to master Gmail keyboard shortcuts.</p></div>
       </div>
 
       <div class="help-content" id="helpWiki">
