@@ -92,12 +92,22 @@
 
       <!-- ═══════════════════ EXPORT BAR (always visible) ═══════════════════ -->
       <div class="card gmail-export-bar-main" id="exportBarMain">
+        <div style="font-size:0.82rem;opacity:0.6;margin-bottom:8px">💾 <b>Export your entire inbox</b></div>
         <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px">
-          <span style="font-size:0.82rem;opacity:0.6;flex:1">💾 Export:</span>
-          <button class="btn-sm" onclick="gmailExportAllInbox('csv')" id="exportAllCsvBtn" disabled>All Inbox CSV</button>
-          <button class="btn-sm" onclick="gmailExportAllInbox('json')" id="exportAllJsonBtn" disabled>All Inbox JSON</button>
-          <button class="btn-sm" onclick="gmailExportAllInbox('txt')" id="exportAllTxtBtn" disabled>All Inbox TXT</button>
-          <a href="https://takeout.google.com/settings/takeout/custom/gmail" target="_blank" rel="noopener" class="btn-sm" style="text-decoration:none;color:var(--accent)">📦 Takeout</a>
+          <span style="font-size:0.75rem;opacity:0.5">📋 Headers (From, Subject, Date):</span>
+          <button class="btn-sm" onclick="gmailExportAllInbox('csv')" id="exportAllCsvBtn" disabled>CSV</button>
+          <button class="btn-sm" onclick="gmailExportAllInbox('json')" id="exportAllJsonBtn" disabled>JSON</button>
+          <button class="btn-sm" onclick="gmailExportAllInbox('txt')" id="exportAllTxtBtn" disabled>TXT</button>
+        </div>
+        <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px;margin-top:6px">
+          <span style="font-size:0.75rem;opacity:0.5">📄 Full body (From, To, Subject, Body):</span>
+          <button class="btn-sm" onclick="gmailExportFull('csv')" id="exportFullCsvBtn2" disabled>CSV</button>
+          <button class="btn-sm" onclick="gmailExportFull('json')" id="exportFullJsonBtn2" disabled>JSON</button>
+          <button class="btn-sm" onclick="gmailExportFull('txt')" id="exportFullTxtBtn2" disabled>TXT</button>
+        </div>
+        <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px;margin-top:6px">
+          <span style="font-size:0.75rem;opacity:0.5">📦 Complete backup (all 20,000+):</span>
+          <a href="https://takeout.google.com/settings/takeout/custom/gmail" target="_blank" rel="noopener" class="btn-sm" style="text-decoration:none;color:var(--accent)">Google Takeout →</a>
         </div>
         <div id="exportAllProgress" class="gmail-export-progress" style="display:none;margin-top:6px">
           <div class="gmail-export-bar"><div class="gmail-export-fill" id="exportAllFill"></div></div>

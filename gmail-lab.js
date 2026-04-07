@@ -91,7 +91,7 @@ function gmailEnableButtons(enabled) {
   if (cs) cs.disabled = !enabled;
   if (ec) ec.disabled = !enabled;
   if (sb) sb.disabled = !enabled;
-  ['scanAttachBtn','exportAttachBtn','wordCloudBtn','digestDayBtn','digestWeekBtn','digestMonthBtn','sizeBtn','scoreBtn','exportAllCsvBtn','exportAllJsonBtn','exportAllTxtBtn','timelineBtn','networkBtn','dupeBtn','catBtn'].forEach(id => {
+  ['scanAttachBtn','exportAttachBtn','wordCloudBtn','digestDayBtn','digestWeekBtn','digestMonthBtn','sizeBtn','scoreBtn','exportAllCsvBtn','exportAllJsonBtn','exportAllTxtBtn','exportFullCsvBtn2','exportFullJsonBtn2','exportFullTxtBtn2','timelineBtn','networkBtn','dupeBtn','catBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !enabled;
   });
