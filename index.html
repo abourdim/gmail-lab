@@ -273,26 +273,127 @@
         </div>
 
         <div class="wiki-entry">
-          <h3>🛠️ Troubleshooting</h3>
+          <h3>⚙️ Google OAuth Configuration Guide</h3>
+          <p style="margin-bottom:8px"><b>What is OAuth?</b> OAuth lets users sign in with their Google account and grant your app limited access (read-only Gmail) without sharing their password.</p>
+
+          <h4 style="margin-top:12px;color:var(--accent)">Step 1: Create a Google Cloud Project</h4>
+          <ol class="gmail-setup-list">
+            <li>Go to <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a></li>
+            <li>Click the project dropdown (top bar) → <b>New Project</b></li>
+            <li>Name it (e.g. "Gmail Lab") → <b>Create</b></li>
+            <li>Make sure this project is selected in the top bar</li>
+          </ol>
+
+          <h4 style="margin-top:12px;color:var(--accent)">Step 2: Enable Gmail API</h4>
+          <ol class="gmail-setup-list">
+            <li>Go to <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">API Library → Gmail API</a></li>
+            <li>Click <b>Enable</b></li>
+            <li>Wait for it to activate (takes a few seconds)</li>
+          </ol>
+
+          <h4 style="margin-top:12px;color:var(--accent)">Step 3: Configure OAuth Consent Screen</h4>
+          <ol class="gmail-setup-list">
+            <li>Go to <a href="https://console.cloud.google.com/auth/overview" target="_blank">Google Auth Platform</a> → <b>Audience</b></li>
+            <li>User type: <b>External</b> (unless you have Google Workspace)</li>
+            <li>Go to <b>Branding</b>: App name = "Gmail Lab", add your email</li>
+            <li><b>Scopes</b>: skip (the app requests scopes at runtime)</li>
+            <li><b>Audience → Test users</b>: click <b>+ Add users</b> → add your Gmail address</li>
+          </ol>
+          <p style="font-size:.78rem;opacity:.6">Without adding yourself as a test user, you'll get "Access blocked" when signing in.</p>
+
+          <h4 style="margin-top:12px;color:var(--accent)">Step 4: Create OAuth Client ID</h4>
+          <ol class="gmail-setup-list">
+            <li>Go to <b>Clients</b> (left sidebar) or <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Credentials</a></li>
+            <li>Click <b>+ CREATE CREDENTIALS</b> → <b>OAuth client ID</b></li>
+            <li>Application type: <b>Web application</b></li>
+            <li>Name: "Gmail Lab"</li>
+            <li><b>Authorized JavaScript origins</b> — add ALL URLs where the app runs:
+              <ul class="gmail-setup-list">
+                <li><code>http://localhost:8080</code> (local dev)</li>
+                <li><code>http://localhost:8765</code> (if using different port)</li>
+                <li><code>https://yourusername.github.io</code> (GitHub Pages)</li>
+              </ul>
+            </li>
+            <li>Leave <b>Redirect URIs</b> empty (not needed for this app)</li>
+            <li>Click <b>Create</b> → copy the <b>Client ID</b></li>
+          </ol>
+          <p style="font-size:.78rem;opacity:.6">The Client ID looks like: <code>123456789-abc.apps.googleusercontent.com</code></p>
+
+          <h4 style="margin-top:12px;color:var(--accent)">Step 5: Use It</h4>
+          <ol class="gmail-setup-list">
+            <li>Paste the Client ID in the Gmail Lab app</li>
+            <li>Click <b>Sign in with Google</b></li>
+            <li>On the "Google hasn't verified this app" screen, click <b>Continue</b> (safe — you're the developer)</li>
+            <li>Grant <b>read-only</b> Gmail access</li>
+          </ol>
+        </div>
+
+        <div class="wiki-entry">
+          <h3>⚠️ Common Pitfalls & Fixes</h3>
+
           <details class="help-item">
-            <summary>"Access blocked" or "App not verified"</summary>
-            <p>Your app is in testing mode. Go to <b>OAuth consent screen</b> → <b>Test users</b> → add your Gmail address.</p>
+            <summary>1. "Access blocked: app not verified"</summary>
+            <p><b>Cause:</b> Your Gmail is not in the test users list.<br>
+            <b>Fix:</b> Google Auth Platform → <b>Audience</b> → <b>Test users</b> → <b>+ Add users</b> → add your email.<br>
+            <b>Note:</b> You can add up to 100 test users. Each must be a real Google account.</p>
           </details>
+
           <details class="help-item">
-            <summary>"Invalid origin" error</summary>
-            <p>Your current URL must be listed in <b>Authorized JavaScript origins</b>. Add both <code>http://localhost:8080</code> and your GitHub Pages URL.</p>
+            <summary>2. "Google n'a pas validé cette application"</summary>
+            <p><b>Cause:</b> Normal for apps in testing mode.<br>
+            <b>Fix:</b> Click <b>"Continuer"</b> (or "Continue" in English). This is safe since you are the developer.<br>
+            <b>To remove this screen:</b> Publish the app (Audience → "Publier l'application"), but this requires Google verification for sensitive scopes like Gmail.</p>
           </details>
+
           <details class="help-item">
-            <summary>"Gmail API not enabled"</summary>
-            <p>Go to <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">API Library</a> and click <b>Enable</b> for Gmail API.</p>
+            <summary>3. "Error 400: redirect_uri_mismatch"</summary>
+            <p><b>Cause:</b> Your current URL is not in the Authorized JavaScript origins.<br>
+            <b>Fix:</b> Go to Credentials → edit your OAuth client → add the exact URL (including port). No trailing slash!<br>
+            <b>Example:</b> <code>https://abourdim.github.io</code> (not <code>https://abourdim.github.io/</code>)<br>
+            <b>Wait:</b> Changes can take 5 minutes to propagate.</p>
           </details>
+
           <details class="help-item">
-            <summary>Token expired / "Please sign in again"</summary>
-            <p>Access tokens expire after 1 hour. The app tries to refresh automatically, but if it fails, just click Sign In again.</p>
+            <summary>4. "Error 403: access_denied"</summary>
+            <p><b>Cause:</b> Gmail API is not enabled, or the user is not a test user.<br>
+            <b>Fix:</b> Enable <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">Gmail API</a> AND add the user to test users.</p>
           </details>
+
           <details class="help-item">
-            <summary>No emails showing</summary>
-            <p>Check your search query. Some accounts may have IMAP disabled — enable it in Gmail Settings → Forwarding and POP/IMAP.</p>
+            <summary>5. "idpiframe_initialization_failed"</summary>
+            <p><b>Cause:</b> Third-party cookies are blocked in your browser.<br>
+            <b>Fix:</b> Allow third-party cookies for <code>accounts.google.com</code>, or try in a different browser. Incognito mode often blocks these.</p>
+          </details>
+
+          <details class="help-item">
+            <summary>6. Token expires after 1 hour</summary>
+            <p><b>Cause:</b> Google access tokens have a 1-hour lifetime. This is by design.<br>
+            <b>Fix:</b> The app attempts auto-refresh. If it fails, click Sign In again. No data is lost.</p>
+          </details>
+
+          <details class="help-item">
+            <summary>7. "popup_closed_by_user"</summary>
+            <p><b>Cause:</b> The Google sign-in popup was closed before completing.<br>
+            <b>Fix:</b> Click Sign In again and complete the full flow. Don't close the popup.</p>
+          </details>
+
+          <details class="help-item">
+            <summary>8. App works locally but not on GitHub Pages</summary>
+            <p><b>Cause:</b> Missing origin in OAuth credentials.<br>
+            <b>Fix:</b> Add <code>https://yourusername.github.io</code> to Authorized JavaScript origins. Note: use the root domain, not the full path.<br>
+            <b>Also check:</b> GitHub Pages may take a few minutes to deploy after a push.</p>
+          </details>
+
+          <details class="help-item">
+            <summary>9. "This app is blocked" (Workspace accounts)</summary>
+            <p><b>Cause:</b> Google Workspace admin has restricted third-party app access.<br>
+            <b>Fix:</b> Use a personal Gmail account, or ask your Workspace admin to allow the app. Alternatively, set the OAuth app type to "Internal" (Workspace only).</p>
+          </details>
+
+          <details class="help-item">
+            <summary>10. Emails show HTML entities (&#39; etc.)</summary>
+            <p><b>Cause:</b> Some email snippets contain encoded characters.<br>
+            <b>Fix:</b> This is a display issue from Google's API. The full email content (click to read) should render correctly.</p>
           </details>
         </div>
 
