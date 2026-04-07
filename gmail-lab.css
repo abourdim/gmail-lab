@@ -515,6 +515,9 @@
 /* ═══ APP BOTTOM PADDING (for fixed quick bar) ═══ */
 .app { padding-bottom: 70px; }
 
+/* ═══ EXPORT BAR MAIN ═══ */
+.gmail-export-bar-main { padding: 10px 14px; }
+
 /* ═══ MAIN SEARCH ═══ */
 .gmail-main-search {
   padding: 10px 14px;

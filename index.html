@@ -90,6 +90,22 @@
         </div>
       </div>
 
+      <!-- ═══════════════════ EXPORT BAR (always visible) ═══════════════════ -->
+      <div class="card gmail-export-bar-main" id="exportBarMain">
+        <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px">
+          <span style="font-size:0.82rem;opacity:0.6;flex:1">💾 Export:</span>
+          <button class="btn-sm" onclick="gmailExportAllInbox('csv')" id="exportAllCsvBtn" disabled>All Inbox CSV</button>
+          <button class="btn-sm" onclick="gmailExportAllInbox('json')" id="exportAllJsonBtn" disabled>All Inbox JSON</button>
+          <button class="btn-sm" onclick="gmailExportAllInbox('txt')" id="exportAllTxtBtn" disabled>All Inbox TXT</button>
+          <a href="https://takeout.google.com/settings/takeout/custom/gmail" target="_blank" rel="noopener" class="btn-sm" style="text-decoration:none;color:var(--accent)">📦 Takeout</a>
+        </div>
+        <div id="exportAllProgress" class="gmail-export-progress" style="display:none;margin-top:6px">
+          <div class="gmail-export-bar"><div class="gmail-export-fill" id="exportAllFill"></div></div>
+          <span id="exportAllText">0 / ?</span>
+        </div>
+        <div id="exportAllInfo" style="font-size:0.72rem;opacity:0.4;margin-top:4px"></div>
+      </div>
+
       <!-- ═══════════════════ TIP OF THE DAY (toast style) ═══════════════════ -->
       <div class="gmail-tip-banner" id="tipBanner" style="display:none">
         <span class="gmail-tip-icon">💡</span>
@@ -268,16 +284,7 @@
       <!-- 💾 DATA TAB -->
       <div class="tools-content" id="toolsData">
         <h4 class="tools-section">💾 Export All Inbox</h4>
-        <div class="gmail-stats-bar" style="flex-wrap:wrap;gap:6px">
-          <button class="btn-sm" onclick="gmailExportAllInbox('csv')" id="exportAllCsvBtn" disabled>CSV</button>
-          <button class="btn-sm" onclick="gmailExportAllInbox('json')" id="exportAllJsonBtn" disabled>JSON</button>
-          <button class="btn-sm" onclick="gmailExportAllInbox('txt')" id="exportAllTxtBtn" disabled>TXT</button>
-        </div>
-        <div id="exportAllProgress" class="gmail-export-progress" style="display:none;margin-top:8px">
-          <div class="gmail-export-bar"><div class="gmail-export-fill" id="exportAllFill"></div></div>
-          <span id="exportAllText">0 / ?</span>
-        </div>
-        <div id="exportAllInfo" style="font-size:0.75rem;opacity:0.5;margin-top:4px"></div>
+        <p style="font-size:0.78rem;opacity:0.5">Use the export bar on the main page, or Google Takeout for a full backup.</p>
         <a href="https://takeout.google.com/settings/takeout/custom/gmail" target="_blank" rel="noopener" class="gmail-takeout-link" style="margin-top:8px">
           <span>📦 Google Takeout — Full Backup</span>
         </a>
