@@ -810,22 +810,41 @@ async function gmailExportAll(format) {
   log(`⬇️ Exporting all ~${estimate} emails…`, 'info');
 
   try {
+    // Step 1: Collect all message IDs (fast, no metadata fetch)
+    const allIds = [];
     do {
-      const result = await gmailSearch(gmailLastQuery, 100, pageToken);
-      allEmails.push(...result.emails);
-      pageToken = result.nextPageToken;
-      page++;
+      const listParams = { userId: 'me', q: gmailLastQuery, maxResults: 500 };
+      if (pageToken) listParams.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(listParams);
+      allIds.push(...(r.result.messages || []).map(m => m.id));
+      pageToken = r.result.nextPageToken;
 
-      const pct = Math.min(100, Math.round((allEmails.length / estimate) * 100));
-      if (fillEl) fillEl.style.width = pct + '%';
-      if (textEl) textEl.textContent = `${allEmails.length} / ~${estimate}`;
-
-      // Safety: max 2000 emails to avoid rate limits
-      if (allEmails.length >= 2000) {
-        log('⚠️ Export capped at 2000 emails (rate limit protection)', 'info');
-        break;
-      }
+      if (textEl) textEl.textContent = `IDs: ${allIds.length} / ~${estimate}`;
+      if (allIds.length >= 2000) { log('⚠️ Capped at 2000', 'info'); break; }
     } while (pageToken);
+
+    // Step 2: Fetch metadata for each
+    log(`📦 Reading metadata for ${allIds.length} emails…`, 'info');
+    for (let i = 0; i < allIds.length; i++) {
+      try {
+        const d = await gapi.client.gmail.users.messages.get({
+          userId: 'me', id: allIds[i], format: 'metadata',
+          metadataHeaders: ['From', 'Subject', 'Date']
+        });
+        const h = d.result.payload.headers;
+        const get = n => (h.find(x => x.name === n) || {}).value || '';
+        allEmails.push({
+          id: allIds[i], from: get('From'), subject: get('Subject'),
+          date: get('Date'), snippet: d.result.snippet,
+          unread: (d.result.labelIds || []).includes('UNREAD')
+        });
+      } catch { allEmails.push({ id: allIds[i], from: '', subject: '(error)', date: '', snippet: '', unread: false }); }
+
+      const pct = Math.min(100, Math.round(((i + 1) / allIds.length) * 100));
+      if (fillEl) fillEl.style.width = pct + '%';
+      if (textEl) textEl.textContent = `${i + 1} / ${allIds.length}`;
+      if ((i + 1) % 25 === 0) await new Promise(r => setTimeout(r, 300));
+    }
 
     const ts = new Date().toISOString().slice(0, 10);
     const prefix = `gmail-ALL-${gmailLastTitle.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}-${ts}`;
@@ -911,8 +930,8 @@ async function gmailExportFull(format) {
       if (fillEl) fillEl.style.width = pct + '%';
       if (textEl) textEl.textContent = `IDs: ${allIds.length} / ~${estimate}`;
 
-      if (allIds.length >= 500) {
-        log(`⚠️ Full export capped at 500 emails (API rate protection)`, 'info');
+      if (allIds.length >= 1000) {
+        log(`⚠️ Full export capped at 1000 emails (API rate protection)`, 'info');
         break;
       }
     } while (pageToken);
