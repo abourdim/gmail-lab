@@ -335,10 +335,20 @@ async function gmailLoadStats() {
 
 async function gmailCheckUnread() {
   try {
-    const r = await gapi.client.gmail.users.messages.list({ userId: 'me', q: 'is:unread', maxResults: 1 });
-    const unreadCount = r.result.resultSizeEstimate || 0;
+    // Get exact unread count by paginating IDs
+    let unreadCount = 0;
+    let pageToken = null;
+    do {
+      const p = { userId: 'me', q: 'is:unread', maxResults: 500 };
+      if (pageToken) p.pageToken = pageToken;
+      const r = await gapi.client.gmail.users.messages.list(p);
+      unreadCount += (r.result.messages || []).length;
+      pageToken = r.result.nextPageToken;
+      // Cap at 500 for speed — enough to show the real picture
+      if (unreadCount >= 500) { unreadCount = '500+'; break; }
+    } while (pageToken);
+
     if (unreadCount > 0) {
-      // Update stats display
       const el = document.getElementById('gmailStats');
       if (el) el.textContent += ` · 📬 ${unreadCount} unread`;
       log(`📬 You have ~${unreadCount} unread emails`, 'info');
