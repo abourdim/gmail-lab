@@ -618,6 +618,7 @@ async function gmailHandleRead(id) {
   gmailShowLoading('Reading…');
   try {
     const full = await gmailReadMessage(id);
+    full._msgId = id;
     gmailShowEmailFull(full);
     playSound('success');
   } catch (e) {
@@ -2331,6 +2332,7 @@ gmailShowEmailFull = function(email) {
       </div>
     </div>
     <button class="btn-sm" onclick="printEmail()">🖨️ PDF</button>
+    ${email._msgId ? `<a class="btn-sm gmail-open-in-gmail" href="https://mail.google.com/mail/u/0/#inbox/${email._msgId}" target="_blank" rel="noopener">📧 Open in Gmail</a>` : ''}
   `;
   body.insertBefore(toolbar, body.querySelector('.gmail-email-body'));
 

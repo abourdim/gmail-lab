@@ -568,6 +568,13 @@
 }
 .gmail-reply-btn:hover { background: var(--accent); color: #fff; }
 
+/* ═══ OPEN IN GMAIL ═══ */
+.gmail-open-in-gmail {
+  text-decoration: none; color: #4285f4 !important;
+  border-color: rgba(66,133,244,.3) !important;
+}
+.gmail-open-in-gmail:hover { background: rgba(66,133,244,.15) !important; }
+
 /* ═══ TIMELINE ═══ */
 .gmail-timeline { margin-top: 8px; }
 .timeline-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding-top: 8px; }
