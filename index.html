@@ -222,22 +222,99 @@
       </div>
 
       <div class="help-content" id="helpWiki">
+
         <div class="wiki-entry">
-          <h3 data-i18n="wiki_themes_title">📧 Gmail API</h3>
-          <p data-i18n="wiki_themes">This app uses the official Google Gmail API with OAuth2. Your browser talks directly to Google — no middleman.</p>
+          <h3>🔑 Getting Your Google Client ID</h3>
+          <ol class="gmail-setup-list">
+            <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a></li>
+            <li>Click <b>Select a project</b> → <b>New Project</b> → name it "Gmail Lab" → <b>Create</b></li>
+            <li>Click <b>"+ CREATE CREDENTIALS"</b> → <b>"OAuth client ID"</b></li>
+            <li>If asked, configure the <b>OAuth consent screen</b> first:
+              <ul class="gmail-setup-list">
+                <li>User type: <b>External</b> → Create</li>
+                <li>App name: "Gmail Lab", add your email</li>
+                <li>Scopes: skip (click Save)</li>
+                <li><b>Test users</b>: add your own Gmail address</li>
+                <li>Click <b>Back to Dashboard</b></li>
+              </ul>
+            </li>
+            <li>Now create credentials: Application type = <b>Web application</b></li>
+            <li>Under <b>Authorized JavaScript origins</b>, add:
+              <ul class="gmail-setup-list">
+                <li><code>http://localhost:8080</code> (for local testing)</li>
+                <li><code>https://abourdim.github.io</code> (for GitHub Pages)</li>
+              </ul>
+            </li>
+            <li>Click <b>Create</b> → copy the <b>Client ID</b></li>
+            <li>Go to <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">API Library → Gmail API</a> → click <b>Enable</b></li>
+          </ol>
         </div>
+
         <div class="wiki-entry">
-          <h3 data-i18n="wiki_i18n_title">🔍 Search Syntax</h3>
-          <p data-i18n="wiki_i18n">Gmail search supports operators like from:, to:, subject:, is:unread, has:attachment, and date ranges.</p>
+          <h3>📧 How It Works</h3>
+          <p>Gmail Lab uses Google's official OAuth2 + Gmail API. Your browser talks directly to Google — no server in between. The app only requests <b>read-only</b> access (<code>gmail.readonly</code>), meaning it can never modify, delete, or send emails.</p>
         </div>
+
         <div class="wiki-entry">
-          <h3 data-i18n="wiki_log_title">📜 Activity Log</h3>
-          <p data-i18n="wiki_log">Every API call is logged — see what's happening behind the scenes in real time.</p>
+          <h3>🔍 Gmail Search Syntax</h3>
+          <table style="width:100%;font-size:.82rem;border-collapse:collapse">
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>from:name</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Emails from a sender</td></tr>
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>to:name</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Emails you sent to someone</td></tr>
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>subject:word</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Search by subject</td></tr>
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>is:unread</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Unread emails</td></tr>
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>is:starred</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Starred emails</td></tr>
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>has:attachment</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Emails with files</td></tr>
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>in:sent</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Your sent emails</td></tr>
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>newer_than:7d</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Last 7 days (also: 1m, 1y)</td></tr>
+            <tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)"><code>label:name</code></td><td style="padding:4px;border-bottom:1px solid var(--border)">Emails with a label</td></tr>
+            <tr><td style="padding:4px 8px"><code>filename:pdf</code></td><td style="padding:4px">Attachments by type</td></tr>
+          </table>
+          <p style="margin-top:8px;opacity:.6;font-size:.78rem">Combine operators: <code>from:ahmed is:unread has:attachment</code></p>
         </div>
+
         <div class="wiki-entry">
-          <h3 data-i18n="wiki_privacy_title">🔒 Privacy</h3>
-          <p data-i18n="wiki_privacy">Read-only access. No server. No tracking. All data stays in your browser. Sign out anytime to revoke access.</p>
+          <h3>🛠️ Troubleshooting</h3>
+          <details class="help-item">
+            <summary>"Access blocked" or "App not verified"</summary>
+            <p>Your app is in testing mode. Go to <b>OAuth consent screen</b> → <b>Test users</b> → add your Gmail address.</p>
+          </details>
+          <details class="help-item">
+            <summary>"Invalid origin" error</summary>
+            <p>Your current URL must be listed in <b>Authorized JavaScript origins</b>. Add both <code>http://localhost:8080</code> and your GitHub Pages URL.</p>
+          </details>
+          <details class="help-item">
+            <summary>"Gmail API not enabled"</summary>
+            <p>Go to <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">API Library</a> and click <b>Enable</b> for Gmail API.</p>
+          </details>
+          <details class="help-item">
+            <summary>Token expired / "Please sign in again"</summary>
+            <p>Access tokens expire after 1 hour. The app tries to refresh automatically, but if it fails, just click Sign In again.</p>
+          </details>
+          <details class="help-item">
+            <summary>No emails showing</summary>
+            <p>Check your search query. Some accounts may have IMAP disabled — enable it in Gmail Settings → Forwarding and POP/IMAP.</p>
+          </details>
         </div>
+
+        <div class="wiki-entry">
+          <h3>🔒 Privacy & Security</h3>
+          <p><b>Read-only</b> — the app cannot modify, delete, or send emails.</p>
+          <p><b>No server</b> — all API calls go directly from your browser to Google.</p>
+          <p><b>No tracking</b> — no analytics, no cookies, no data stored.</p>
+          <p><b>Revocable</b> — sign out anytime to revoke the access token.</p>
+          <p><b>Open source</b> — inspect the code yourself on GitHub.</p>
+        </div>
+
+        <div class="wiki-entry">
+          <h3>🎨 Themes & Languages</h3>
+          <p>8 themes (6 dark + 2 light). Trilingual: English, Français, العربية (auto RTL). Change in Settings (⚙️).</p>
+        </div>
+
+        <div class="wiki-entry">
+          <h3>📜 Activity Log</h3>
+          <p>Every API call is logged with TX (sent) and RX (received) labels. Filter, export, or copy the log.</p>
+        </div>
+
       </div>
     </div>
 

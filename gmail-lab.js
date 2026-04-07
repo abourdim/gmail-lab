@@ -30,6 +30,18 @@ function gmailSaveClientId(id) {
   try { localStorage.setItem('gmail-lab-client-id', id); } catch {}
 }
 
+/* ═══════ OPEN HELP → WIKI ═══════ */
+
+function openHelpWiki() {
+  openHelp();
+  document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.help-content').forEach(c => c.classList.remove('active'));
+  const wikiTab = document.querySelector('.help-tab[data-tab="wiki"]');
+  const wikiContent = document.getElementById('helpWiki');
+  if (wikiTab) wikiTab.classList.add('active');
+  if (wikiContent) wikiContent.classList.add('active');
+}
+
 /* ═══════ MODAL INPUT ═══════ */
 
 function gmailShowModal(promptText, callback) {
@@ -140,7 +152,7 @@ function gmailRenderAuth() {
         <input class="gmail-clientid-input" id="clientIdInput" placeholder="your-client-id.apps.googleusercontent.com"/>
         <button class="gmail-clientid-save" onclick="gmailSetClientId()">Save</button>
       </div>
-      <p style="font-size:0.76rem;opacity:0.45">Don't have one? Open the 🔧 Setup section below.</p>
+      <p style="font-size:0.76rem;opacity:0.45">Don't have one? <a href="#" onclick="openHelpWiki();return false" style="color:var(--accent,#d4a03c)">📖 See the full setup guide in Wiki</a></p>
     `;
     gmailEnableButtons(false);
   } else {
