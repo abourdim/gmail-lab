@@ -996,31 +996,63 @@ async function gmailExportFull(format) {
       }
     } while (pageToken);
 
-    // Step 2: Fetch full content one by one (reliable)
-    log(`📄 Reading ${allIds.length} emails…`, 'info');
+    // Step 2: Fetch full content using gapi.client.newBatch()
+    log(`📄 Reading ${allIds.length} emails in batches of 20…`, 'info');
     const fullEmails = [];
+    const BATCH = 20;
 
-    for (let i = 0; i < allIds.length; i++) {
-      let retries = 2;
-      while (retries > 0) {
-        try {
-          const full = await gmailReadMessage(allIds[i]);
-          fullEmails.push(full);
-          break;
-        } catch {
-          retries--;
-          if (retries > 0) await new Promise(r => setTimeout(r, 1500));
-          else fullEmails.push({ from: '', to: '', subject: '(failed)', date: '', body: '', labels: [] });
+    for (let i = 0; i < allIds.length; i += BATCH) {
+      const chunk = allIds.slice(i, i + BATCH);
+      const batchNum = Math.floor(i / BATCH) + 1;
+      const totalBatches = Math.ceil(allIds.length / BATCH);
+
+      try {
+        // Use gapi batch (official SDK method)
+        const batch = gapi.client.newBatch();
+        chunk.forEach((id, idx) => {
+          batch.add(gapi.client.gmail.users.messages.get({
+            userId: 'me', id: id, format: 'full'
+          }), { id: 'msg' + idx });
+        });
+
+        const batchResp = await batch;
+        for (const key of Object.keys(batchResp.result)) {
+          const res = batchResp.result[key];
+          try {
+            if (res.status !== 200 || !res.result?.payload) {
+              fullEmails.push({ from: '', to: '', subject: '(error ' + (res.status || '') + ')', date: '', body: '', labels: [] });
+              continue;
+            }
+            const msg = res.result;
+            const headers = msg.payload.headers || [];
+            const get = n => (headers.find(x => x.name === n) || {}).value || '';
+            let body = '';
+            function extractBody(p) {
+              if (p.mimeType === 'text/plain' && p.body?.data) body += decodeBase64Utf8(p.body.data);
+              if (p.parts) p.parts.forEach(extractBody);
+            }
+            extractBody(msg.payload);
+            if (!body && msg.snippet) body = msg.snippet;
+            fullEmails.push({ from: get('From'), to: get('To'), subject: get('Subject'), date: get('Date'), body, labels: msg.labelIds || [] });
+          } catch { fullEmails.push({ from: '', to: '', subject: '(parse error)', date: '', body: '', labels: [] }); }
+        }
+      } catch (e) {
+        log(`⚠️ Batch ${batchNum} failed: ${e.message}, reading individually…`, 'error');
+        for (const id of chunk) {
+          try { fullEmails.push(await gmailReadMessage(id)); }
+          catch { fullEmails.push({ from: '', to: '', subject: '(failed)', date: '', body: '', labels: [] }); }
+          await new Promise(r => setTimeout(r, 500));
         }
       }
 
-      const pct = 50 + Math.round(((i + 1) / allIds.length) * 50);
+      const pct = 50 + Math.round((fullEmails.length / allIds.length) * 50);
       if (fillEl) fillEl.style.width = pct + '%';
-      if (textEl) textEl.textContent = `Reading: ${i + 1} / ${allIds.length}`;
-      showToast(`Full export: ${i + 1}/${allIds.length}`, 0);
+      if (textEl) textEl.textContent = `Batch ${batchNum}/${totalBatches} — ${fullEmails.length}/${allIds.length}`;
+      showToast(`Full export: ${fullEmails.length}/${allIds.length}`, 0);
+      log(`📦 Batch ${batchNum}/${totalBatches}: ${fullEmails.length} read`, 'info');
 
-      // Pace: 1s pause every 5 emails
-      if ((i + 1) % 5 === 0) await new Promise(r => setTimeout(r, 1000));
+      // Pause between batches
+      if (i + BATCH < allIds.length) await new Promise(r => setTimeout(r, 1000));
     }
 
     // Step 3: Download
