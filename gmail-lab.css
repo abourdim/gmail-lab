@@ -217,3 +217,52 @@
   background: rgba(255,255,255,0.06); padding: 1px 4px;
   border-radius: 3px; font-size: 0.83em; color: var(--c-accent, #d4a73a);
 }
+
+/* ═══ MODAL ═══ */
+.gmail-modal-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}
+.gmail-modal {
+  background: var(--panel, #0b0d24); border: 1px solid var(--border, rgba(255,255,255,.15));
+  border-radius: 14px; padding: 20px 24px; width: 360px; max-width: 90vw;
+  box-shadow: 0 16px 40px rgba(0,0,0,.5);
+}
+.gmail-modal-text { margin-bottom: 12px; font-size: .9rem; color: var(--text, #e4ddd0); }
+.gmail-modal-input {
+  width: 100%; padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--border, rgba(255,255,255,.15));
+  background: rgba(0,0,0,.3); color: var(--text, #e4ddd0);
+  font-size: .9rem; outline: none; margin-bottom: 14px;
+}
+.gmail-modal-input:focus { border-color: var(--accent, #d4a03c); box-shadow: 0 0 8px rgba(212,160,60,.2); }
+.gmail-modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.gmail-modal-cancel {
+  padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-muted, #888); cursor: pointer;
+}
+.gmail-modal-ok {
+  padding: 8px 20px; border-radius: 8px; border: none;
+  background: var(--accent, #d4a03c); color: #fff; cursor: pointer; font-weight: 600;
+}
+.gmail-modal-ok:hover { filter: brightness(1.1); }
+.light-theme .gmail-modal { background: #fff; }
+.light-theme .gmail-modal-input { background: rgba(0,0,0,.04); }
+
+/* ═══ OFFLINE BANNER ═══ */
+.gmail-offline-banner {
+  padding: 10px 16px; text-align: center;
+  background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3);
+  border-radius: 8px; color: #fca5a5; font-size: .85rem;
+  margin-bottom: 10px;
+}
+
+/* ═══ LOAD MORE ═══ */
+.gmail-load-more {
+  display: block; width: 100%; padding: 10px; margin-top: 8px;
+  border-radius: 8px; border: 1px solid var(--border, rgba(255,255,255,.15));
+  background: transparent; color: var(--accent, #d4a03c);
+  cursor: pointer; font-size: .85rem; text-align: center;
+}
+.gmail-load-more:hover { background: rgba(255,255,255,.05); }

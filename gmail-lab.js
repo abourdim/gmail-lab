@@ -1,7 +1,7 @@
 /**
  * Gmail Lab — Google OAuth + Gmail API
  * Each user connects their own Gmail account
- * Workshop-DIY · v1.0
+ * Workshop-DIY · v1.1
  */
 
 /* ═══════ CONFIG ═══════ */
@@ -19,6 +19,7 @@ let gmailAccessToken = null;
 let gmailUserProfile = null;
 let gmailIsLoading = false;
 let gmailClientId = '';
+let gmailTokenExpiry = 0;
 
 /* ═══════ STORAGE ═══════ */
 
@@ -27,6 +28,43 @@ function gmailGetClientId() {
 }
 function gmailSaveClientId(id) {
   try { localStorage.setItem('gmail-lab-client-id', id); } catch {}
+}
+
+/* ═══════ MODAL INPUT ═══════ */
+
+function gmailShowModal(promptText, callback) {
+  let overlay = document.getElementById('gmailModalOverlay');
+  if (overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'gmailModalOverlay';
+  overlay.className = 'gmail-modal-overlay';
+  overlay.innerHTML = `
+    <div class="gmail-modal">
+      <p class="gmail-modal-text">${gmailEscHtml(promptText)}</p>
+      <input class="gmail-modal-input" id="gmailModalInput" type="text" autofocus />
+      <div class="gmail-modal-btns">
+        <button class="gmail-modal-cancel" id="gmailModalCancel">Cancel</button>
+        <button class="gmail-modal-ok" id="gmailModalOk">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const input = document.getElementById('gmailModalInput');
+  const close = () => overlay.remove();
+  document.getElementById('gmailModalCancel').onclick = () => { close(); callback(null); };
+  document.getElementById('gmailModalOk').onclick = () => { const v = input.value.trim(); close(); callback(v); };
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { const v = input.value.trim(); close(); callback(v); } if (e.key === 'Escape') { close(); callback(null); } });
+  overlay.addEventListener('click', e => { if (e.target === overlay) { close(); callback(null); } });
+  setTimeout(() => input.focus(), 50);
+}
+
+/* ═══════ UTF-8 BASE64 DECODE ═══════ */
+
+function decodeBase64Utf8(data) {
+  const raw = atob(data.replace(/-/g, '+').replace(/_/g, '/'));
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
 }
 
 /* ═══════ UI HELPERS ═══════ */
@@ -223,6 +261,7 @@ async function gmailHandleToken(resp) {
     return;
   }
   gmailAccessToken = resp.access_token;
+  gmailTokenExpiry = Date.now() + (resp.expires_in || 3600) * 1000;
   log('🔐 Signed in successfully', 'success');
 
   // Fetch user info
@@ -261,15 +300,41 @@ async function gmailLoadStats() {
   }
 }
 
+/* ═══════ TOKEN CHECK ═══════ */
+
+async function gmailEnsureToken() {
+  if (!gmailAccessToken) return false;
+  if (Date.now() > gmailTokenExpiry - 60000) {
+    log('🔄 Token expired, refreshing…', 'info');
+    try {
+      await new Promise((resolve, reject) => {
+        gmailTokenClient.requestAccessToken({ prompt: '' });
+        const check = setInterval(() => {
+          if (Date.now() < gmailTokenExpiry - 60000) { clearInterval(check); resolve(); }
+        }, 200);
+        setTimeout(() => { clearInterval(check); reject(new Error('Refresh timeout')); }, 10000);
+      });
+    } catch {
+      log('🔑 Please sign in again', 'error');
+      gmailSignOut();
+      return false;
+    }
+  }
+  return true;
+}
+
 /* ═══════ GMAIL API ═══════ */
 
 async function gmailSearch(query, maxResults) {
   maxResults = maxResults || 5;
   log('🔍 Searching: ' + (query || '(recent)'), 'tx');
-  const r = await gapi.client.gmail.users.messages.list({
-    userId: 'me', q: query, maxResults: maxResults
-  });
+  const listParams = { userId: 'me', q: query, maxResults: maxResults };
+  if (arguments[2] && typeof arguments[2] === 'object' && arguments[2].pageToken) {
+    listParams.pageToken = arguments[2].pageToken;
+  }
+  const r = await gapi.client.gmail.users.messages.list(listParams);
   const messages = r.result.messages || [];
+  const nextPageToken = r.result.nextPageToken || null;
   log('📥 Found ' + messages.length + ' messages', 'rx');
 
   const detailed = [];
@@ -287,7 +352,7 @@ async function gmailSearch(query, maxResults) {
       unread: (d.result.labelIds || []).includes('UNREAD')
     });
   }
-  return detailed;
+  return { emails: detailed, nextPageToken };
 }
 
 async function gmailReadMessage(messageId) {
@@ -302,7 +367,7 @@ async function gmailReadMessage(messageId) {
   let body = '';
   function extract(part) {
     if (part.mimeType === 'text/plain' && part.body && part.body.data) {
-      body += atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+      body += decodeBase64Utf8(part.body.data);
     }
     if (part.parts) part.parts.forEach(extract);
   }
@@ -347,7 +412,7 @@ function gmailShowError(msg) {
   `;
 }
 
-function gmailShowEmailList(title, emails) {
+function gmailShowEmailList(title, emails, query, nextPageToken) {
   const container = document.getElementById('resultsContainer');
   let html = `<div class="gmail-results">
     <div class="gmail-results-header">
@@ -368,9 +433,42 @@ function gmailShowEmailList(title, emails) {
       </div>`;
     }
   }
+  if (nextPageToken && query !== undefined) {
+    html += `<button class="gmail-load-more" onclick="gmailLoadMore('${(query||'').replace(/'/g,"\\'")}','${nextPageToken}')">Load more…</button>`;
+  }
   html += '</div></div>';
   container.innerHTML = html;
   container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function gmailLoadMore(query, pageToken) {
+  if (gmailIsLoading || !gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
+  gmailIsLoading = true;
+  try {
+    const result = await gmailSearch(query, { pageToken });
+    const body = document.querySelector('.gmail-results-body');
+    const oldBtn = document.querySelector('.gmail-load-more');
+    if (oldBtn) oldBtn.remove();
+    if (body) {
+      for (const e of result.emails) {
+        const from = gmailEscHtml(e.from.replace(/<.*>/, '').trim() || e.from);
+        body.insertAdjacentHTML('beforeend', `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
+          <div class="gmail-email-from">${from}</div>
+          <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
+          <div class="gmail-email-snippet">${gmailEscHtml(e.snippet)}</div>
+          <div class="gmail-email-date">${gmailFormatDate(e.date)}</div>
+        </div>`);
+      }
+      if (result.nextPageToken) {
+        body.insertAdjacentHTML('beforeend', `<button class="gmail-load-more" onclick="gmailLoadMore('${query.replace(/'/g,"\\'")}','${result.nextPageToken}')">Load more…</button>`);
+      }
+    }
+    playSound('success');
+  } catch (e) {
+    log('❌ ' + (e.message || 'Load more failed'), 'error');
+  }
+  gmailIsLoading = false;
 }
 
 function gmailShowEmailFull(email) {
@@ -421,11 +519,12 @@ function gmailShowLabels(labels) {
 
 async function gmailRunSearch(query, title, max) {
   if (gmailIsLoading || !gmailAccessToken) return;
+  if (!(await gmailEnsureToken())) return;
   gmailIsLoading = true;
   gmailShowLoading(title);
   try {
-    const msgs = await gmailSearch(query, max || 8);
-    gmailShowEmailList(title, msgs);
+    const result = await gmailSearch(query, max || 8);
+    gmailShowEmailList(title, result.emails, query, result.nextPageToken);
     playSound('success');
   } catch (e) {
     gmailShowError(e.message || 'Search failed');
@@ -493,18 +592,20 @@ function gmailBuildExamples() {
       playSound('click');
 
       if (ex.askInput) {
-        const val = prompt(ex.askPrompt);
-        if (!val) return;
-        const q = (ex.prefix || 'from:') + val;
-        gmailRunSearch(q, ex.label + ': ' + val);
+        gmailShowModal(ex.askPrompt, (val) => {
+          if (!val) return;
+          const q = (ex.prefix || 'from:') + val;
+          gmailRunSearch(q, ex.label + ': ' + val);
+        });
+        return;
       } else if (ex.special === 'latest') {
         if (gmailIsLoading) return;
         gmailIsLoading = true;
         gmailShowLoading('Latest Email');
         try {
-          const msgs = await gmailSearch('', 1);
-          if (msgs.length) {
-            const full = await gmailReadMessage(msgs[0].id);
+          const result = await gmailSearch('', 1);
+          if (result.emails.length) {
+            const full = await gmailReadMessage(result.emails[0].id);
             gmailShowEmailFull(full);
             playSound('success');
           } else { gmailShowError('No emails found'); }
@@ -533,8 +634,36 @@ function gmailBuildExamples() {
   });
 }
 
+/* ═══════ OFFLINE HANDLING ═══════ */
+
+function gmailCheckOnline() {
+  const container = document.getElementById('resultsContainer');
+  if (!navigator.onLine) {
+    if (container) container.innerHTML = '<div class="gmail-offline-banner">📡 You are offline. Gmail features require an internet connection.</div>';
+    gmailEnableButtons(false);
+    setStatus(false);
+    log('📡 Offline — no internet connection', 'error');
+    return false;
+  }
+  return true;
+}
+
+window.addEventListener('online', () => {
+  log('📡 Back online!', 'success');
+  gmailEnableButtons(!!gmailAccessToken);
+  if (gmailAccessToken) setStatus(true);
+  const banner = document.querySelector('.gmail-offline-banner');
+  if (banner) banner.remove();
+});
+
+window.addEventListener('offline', () => {
+  gmailCheckOnline();
+});
+
 /* ═══════ INIT ═══════ */
 
 gmailBuildExamples();
 gmailRenderAuth();
-log('📧 Gmail Lab ready — connect your Google account!', 'success');
+if (gmailCheckOnline()) {
+  log('📧 Gmail Lab ready — connect your Google account!', 'success');
+}
