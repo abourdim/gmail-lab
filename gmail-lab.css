@@ -494,16 +494,14 @@
 
 /* ═══ SEARCH HINTS ═══ */
 .gmail-search-hints {
-  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px;
+  display: flex; gap: 4px; flex-wrap: wrap; margin: 0;
 }
 .gmail-search-hints span {
-  font-size: 0.62rem; color: var(--text-muted); opacity: 0.4;
-  cursor: pointer; padding: 1px 5px; border-radius: 4px;
-  border: 1px solid transparent; transition: all .2s;
+  font-size: 0.58rem; color: var(--text-muted); opacity: 0.35;
+  cursor: pointer; padding: 0 3px; transition: all .2s;
 }
 .gmail-search-hints span:hover {
-  opacity: 1; color: var(--accent); border-color: var(--border);
-  background: rgba(255,255,255,.04);
+  opacity: 1; color: var(--accent);
 }
 
 /* ═══ COUNT BUTTON ═══ */
@@ -558,13 +556,14 @@
 
 /* ═══ MAIN SEARCH ═══ */
 .gmail-main-search {
-  padding: 10px 14px;
+  padding: 6px 14px;
   position: sticky; top: 0; z-index: 40;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
 .gmail-main-search .gmail-search-row { margin: 0; }
-.gmail-main-search .gmail-search-input { font-size: 0.92rem; padding: 12px 16px; }
+.gmail-main-search .gmail-search-input { font-size: 0.88rem; padding: 10px 14px; }
+.gmail-main-search .gmail-sub-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
 
 /* ═══ TOOLS CONTENT TABS ═══ */
 .tools-content { display: none; }
