@@ -479,6 +479,17 @@
 /* ═══ DIGEST ═══ */
 .gmail-digest { margin-top: 8px; }
 
+/* ═══ SAVE SEARCH BUTTONS ═══ */
+.gmail-save-search-btn, .gmail-save-result-btn {
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; cursor: pointer;
+  font-size: 1rem; transition: all .2s;
+}
+.gmail-save-search-btn:hover, .gmail-save-result-btn:hover {
+  background: rgba(251,191,36,.15); border-color: #fbbf24;
+  transform: scale(1.1);
+}
+
 /* ═══ TAKEOUT LINK ═══ */
 .gmail-takeout-link {
   display: flex; flex-direction: column; gap: 4px;
