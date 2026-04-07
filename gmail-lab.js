@@ -1220,7 +1220,7 @@ function renderHistory() {
       recentEl.innerHTML = `<div style="text-align:right;margin-bottom:6px"><button class="gmail-history-clear" onclick="clearSearchHistory()">🧹 Clear</button></div>` +
         searchHistory.map(h => `
           <div class="gmail-history-item">
-            <div class="gmail-history-info" onclick="gmailRunSearch('${gmailEscHtml(h.query).replace(/'/g,"\\'")}','${gmailEscHtml(h.title||h.query).replace(/'/g,"\\'")}')">
+            <div class="gmail-history-info" onclick="pasteToSearch('${gmailEscJs(h.query)}')">
               <span class="gmail-history-query">${gmailEscHtml(h.title || h.query)}</span>
               <span class="gmail-history-time">${h.time}</span>
             </div>
@@ -1236,7 +1236,7 @@ function renderHistory() {
     } else {
       savedEl.innerHTML = savedSearches.map((s, i) => `
         <div class="gmail-history-item">
-          <div class="gmail-history-info" onclick="gmailRunSearch('${gmailEscHtml(s.query).replace(/'/g,"\\'")}','${gmailEscHtml(s.title||s.query).replace(/'/g,"\\'")}')">
+          <div class="gmail-history-info" onclick="pasteToSearch('${gmailEscJs(s.query)}')">
             <span class="gmail-history-query">⭐ ${gmailEscHtml(s.title || s.query)}</span>
             <span class="gmail-history-time">${s.time}</span>
           </div>
@@ -1245,6 +1245,22 @@ function renderHistory() {
       `).join('');
     }
   }
+}
+
+function pasteToSearch(query) {
+  const input = document.getElementById('customInput');
+  if (!input) return;
+  // Append to existing text with comma if not empty
+  const current = input.value.trim();
+  if (current && !current.endsWith(',')) {
+    input.value = current + ', ' + query;
+  } else if (current) {
+    input.value = current + ' ' + query;
+  } else {
+    input.value = query;
+  }
+  input.focus();
+  playSound('click');
 }
 
 function saveCurrentSearch() {
