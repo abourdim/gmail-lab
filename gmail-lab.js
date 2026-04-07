@@ -694,7 +694,7 @@ function runCustomSearch() {
 /* ═══════ EXAMPLE BUTTONS ═══════ */
 
 const GMAIL_EXAMPLES = [
-  { icon: '📬', label: 'Show my unread emails', query: 'is:unread', tip: 'is:unread' },
+  { icon: '📬', label: 'Show my unread emails', query: 'is:unread in:inbox', tip: 'is:unread in:inbox' },
   { icon: '🔍', label: 'Find emails from someone', query: null, tip: 'from:email', askInput: true, askPrompt: 'Enter email address or name:' },
   { icon: '📖', label: 'Read my latest email', query: null, tip: 'Reads newest message', special: 'latest' },
   { icon: '📋', label: 'Search by subject', query: null, tip: 'subject:keyword', askInput: true, askPrompt: 'Enter subject keyword:', prefix: 'subject:' },
