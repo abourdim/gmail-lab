@@ -518,6 +518,26 @@
           <summary>What are Saved Searches?</summary>
           <p>Every search is saved in your history (last 50). Click ⭐ to bookmark a search for quick re-use. History and bookmarks persist across sessions.</p>
         </details>
+        <details class="help-item">
+          <summary>How does multi-search with commas work?</summary>
+          <p>Type multiple names or emails separated by commas (e.g. <code>alice, bob, carol</code>). The app builds a combined <code>from:X OR to:X</code> query for each. If your terms already have operators (e.g. <code>from:alice, subject:report</code>), they join with <code>OR</code>.</p>
+        </details>
+        <details class="help-item">
+          <summary>What is the MBOX Viewer?</summary>
+          <p>Open a Google Takeout <code>.mbox</code> file directly in the browser — works offline, no Gmail API needed. Search with keywords, comma-separated multi-search, or <b>regex</b> (toggle the Regex checkbox). Supports case-sensitive mode and <code>/pattern/flags</code> syntax. Export filtered results as CSV, JSON, or TXT.</p>
+        </details>
+        <details class="help-item">
+          <summary>What is Auto Exact Count?</summary>
+          <p>After every search, the app automatically counts all matching emails in the background by paginating through the full result set. The header updates from an estimate to the exact number. You can also click the Count button manually at any time.</p>
+        </details>
+        <details class="help-item">
+          <summary>What is the export verification summary?</summary>
+          <p>Every export (CSV, JSON, TXT) appends a verification summary at the end of the file. It includes: total emails, successfully exported count, failed/skipped count, unread count, unique senders, date range, export timestamp, and the search query used.</p>
+        </details>
+        <details class="help-item">
+          <summary>How do I paste from saved searches?</summary>
+          <p>In the Search History panel, clicking a saved search pastes it into the search bar instead of running it immediately. If the bar already has text, the query is appended with a comma — letting you compose multi-searches from your history.</p>
+        </details>
 
         <h4 style="color:var(--accent);margin:12px 0 8px">Technical</h4>
         <details class="help-item">
@@ -568,6 +588,21 @@
         <div class="help-step"><span class="help-step-num">18</span><p>Check <b>Search History & Saved</b> to re-run past searches or bookmark favorites with ⭐.</p></div>
         <div class="help-step"><span class="help-step-num">19</span><p>Take the <b>Gmail Search Quiz</b> to test your knowledge of Gmail search operators.</p></div>
         <div class="help-step"><span class="help-step-num">20</span><p>Practice with the <b>Shortcuts Trainer</b> to master Gmail keyboard shortcuts.</p></div>
+
+        <h4 style="color:var(--accent);margin:12px 0 8px">Advanced Features</h4>
+        <div class="help-step"><span class="help-step-num">21</span><p>Use <b>multi-search</b>: type names separated by commas (e.g. <code>alice, bob</code>) and the app builds a combined OR query automatically.</p></div>
+        <div class="help-step"><span class="help-step-num">22</span><p>Click the <b>search hint chips</b> below the search bar (<code>from:</code>, <code>to:</code>, <code>subj:</code>, etc.) to paste operators directly into your query.</p></div>
+        <div class="help-step"><span class="help-step-num">23</span><p>When reading an email, click <b>Summary</b> for an auto-generated summary, or <b>Smart Replies</b> to get context-aware reply suggestions you can copy.</p></div>
+        <div class="help-step"><span class="help-step-num">24</span><p>Click <b>PDF</b> when reading an email to open a print-friendly version in a new tab for saving or printing.</p></div>
+        <div class="help-step"><span class="help-step-num">25</span><p>Open <b>Email Timeline</b> in the Insights tab to see a monthly volume chart of your inbox history.</p></div>
+        <div class="help-step"><span class="help-step-num">26</span><p>Open <b>Sender Network</b> in the Insights tab to visualize your top email contacts as an interactive radial graph.</p></div>
+        <div class="help-step"><span class="help-step-num">27</span><p>Use <b>Duplicate Finder</b> in the Insights tab to scan for emails with identical subjects from the same sender.</p></div>
+        <div class="help-step"><span class="help-step-num">28</span><p>Use <b>Auto-Categorizer</b> in the Insights tab to sort recent emails into categories (Invoices, Newsletters, Social, Meetings, Jobs, Shopping).</p></div>
+        <div class="help-step"><span class="help-step-num">29</span><p>Open the <b>MBOX Viewer</b> in the Data tab to load a Google Takeout <code>.mbox</code> file. Search with keywords, commas, or regex. Works offline.</p></div>
+        <div class="help-step"><span class="help-step-num">30</span><p>Use <b>Share Search</b> in the Data tab to generate a shareable link or QR code for any Gmail search query.</p></div>
+        <div class="help-step"><span class="help-step-num">31</span><p>Use the <b>Diff Viewer</b> in the Data tab to compare two emails side by side using their message IDs.</p></div>
+        <div class="help-step"><span class="help-step-num">32</span><p>In Search History, click a saved search to <b>paste it</b> into the search bar. If text is already there, it appends with a comma for multi-search composition.</p></div>
+        <div class="help-step"><span class="help-step-num">33</span><p>Check the <b>verification summary</b> at the bottom of any exported file to confirm total count, date range, and success rate.</p></div>
       </div>
 
       <div class="help-content" id="helpWiki">
