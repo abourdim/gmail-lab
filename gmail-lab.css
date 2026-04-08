@@ -602,6 +602,12 @@
 }
 .gmail-reply-btn:hover { background: var(--accent); color: #fff; }
 
+/* ═══ EMAIL INDEX ═══ */
+.gmail-email-idx {
+  float: inline-end; font-size: 0.62rem; color: var(--text-muted); opacity: 0.4;
+  padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,.1);
+}
+
 /* ═══ OPEN IN GMAIL ═══ */
 .gmail-open-in-gmail {
   text-decoration: none; color: #4285f4 !important;

@@ -534,9 +534,11 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
   if (!emails.length) {
     html += '<p style="text-align:center;opacity:0.5;padding:1rem">No emails found.</p>';
   } else {
-    for (const e of emails) {
+    for (let idx = 0; idx < emails.length; idx++) {
+      const e = emails[idx];
       const from = gmailEscHtml((e.from||'').replace(/<.*>/, '').trim() || e.from);
       html += `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
+        <span class="gmail-email-idx">${idx + 1}/${gmailTotalFound || emails.length}</span>
         <div class="gmail-email-from">${from}</div>
         <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
         <div class="gmail-email-snippet">${gmailEscHtml(e.snippet)}</div>
@@ -563,9 +565,12 @@ async function gmailLoadMore(query, pageToken) {
     const oldBtn = document.querySelector('.gmail-load-more');
     if (oldBtn) oldBtn.remove();
     if (body) {
-      for (const e of result.emails) {
+      for (let idx = 0; idx < result.emails.length; idx++) {
+        const e = result.emails[idx];
+        const num = gmailTotalLoaded - result.emails.length + idx + 1;
         const from = gmailEscHtml((e.from||'').replace(/<.*>/, '').trim() || e.from);
         body.insertAdjacentHTML('beforeend', `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
+          <span class="gmail-email-idx">${num}/${gmailTotalFound}</span>
           <div class="gmail-email-from">${from}</div>
           <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
           <div class="gmail-email-snippet">${gmailEscHtml(e.snippet)}</div>
