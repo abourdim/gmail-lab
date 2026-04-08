@@ -3245,6 +3245,55 @@ function mboxExport(format) {
 
 /* ═══════ TOOLS PANEL ═══════ */
 
+function initToolsResize() {
+  const handle = document.getElementById('toolsResizeHandle');
+  const panel = document.getElementById('toolsPanel');
+  if (!handle || !panel) return;
+  let dragging = false, startX, startW;
+  const isRtl = () => document.documentElement.dir === 'rtl';
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    handle.classList.add('active');
+    document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = isRtl() ? (e.clientX - startX) : (startX - e.clientX);
+    const newW = Math.max(250, Math.min(startW + dx, window.innerWidth * 0.85));
+    panel.style.width = newW + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return; dragging = false;
+    handle.classList.remove('active');
+    document.body.style.cursor = ''; document.body.style.userSelect = '';
+    try { localStorage.setItem('gmail-tools-width', panel.style.width); } catch {}
+  });
+
+  // Touch support
+  handle.addEventListener('touchstart', e => {
+    dragging = true; startX = e.touches[0].clientX; startW = panel.offsetWidth;
+    handle.classList.add('active');
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dx = isRtl() ? (e.touches[0].clientX - startX) : (startX - e.touches[0].clientX);
+    const newW = Math.max(250, Math.min(startW + dx, window.innerWidth * 0.85));
+    panel.style.width = newW + 'px';
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!dragging) return; dragging = false; handle.classList.remove('active');
+    try { localStorage.setItem('gmail-tools-width', panel.style.width); } catch {}
+  });
+
+  // Restore saved width
+  try {
+    const saved = localStorage.getItem('gmail-tools-width');
+    if (saved) panel.style.width = saved;
+  } catch {}
+}
+
 function openTools() {
   const sb = document.getElementById('toolsPanel');
   const ov = document.getElementById('toolsOverlay');
@@ -3320,6 +3369,7 @@ const toolsCloseBtn = document.getElementById('toolsCloseBtn');
 const toolsOverlay = document.getElementById('toolsOverlay');
 if (toolsCloseBtn) toolsCloseBtn.onclick = closeTools;
 if (toolsOverlay) toolsOverlay.onclick = closeTools;
+initToolsResize();
 
 gmailRenderAuth();
 checkUrlQuery();
