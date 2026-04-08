@@ -590,10 +590,18 @@ async function gmailLoadMore(query, pageToken) {
     }
     gmailTotalLoaded += result.emails.length;
     gmailLoadedEmails.push(...result.emails);
-    if (result.totalEstimate) gmailTotalFound = result.totalEstimate;
+    // Don't overwrite exact count with a worse estimate
+    if (!result.nextPageToken && !gmailTotalFound) {
+      gmailTotalFound = gmailTotalLoaded;
+    }
     const statsEl = document.getElementById('resultsStats');
-    if (statsEl) statsEl.textContent = `~${gmailTotalFound} found · showing ${gmailTotalLoaded}`;
-    log(`📊 showing ${gmailTotalLoaded} of ~${gmailTotalFound}`, 'info');
+    if (statsEl) statsEl.textContent = `${gmailTotalFound} found · showing ${gmailTotalLoaded}`;
+    // Update all badges with current total
+    document.querySelectorAll('.gmail-email-idx').forEach(el => {
+      const num = el.textContent.split('/')[0].trim();
+      el.textContent = `${num}/${gmailTotalFound || gmailTotalLoaded}`;
+    });
+    log(`📊 showing ${gmailTotalLoaded} of ${gmailTotalFound}`, 'info');
     playSound('success');
   } catch (e) {
     log('❌ ' + (e.message || 'Load more failed'), 'error');
