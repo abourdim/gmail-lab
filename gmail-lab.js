@@ -311,6 +311,16 @@ function gmailSignOut() {
   }
   gmailAccessToken = null;
   gmailUserProfile = null;
+  gmailTokenExpiry = 0;
+  gmailTotalFound = 0;
+  gmailTotalLoaded = 0;
+  gmailLastQuery = '';
+  gmailLastTitle = '';
+  gmailLoadedEmails = [];
+  extractedContacts = [];
+  attachmentData = [];
+  insightRunning = false;
+  document.title = 'Gmail Lab — Workshop DIY';
   log('👋 Signed out', 'info');
   gmailRenderAuth();
   document.getElementById('resultsContainer').innerHTML = '';
@@ -554,7 +564,7 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
 
 async function gmailLoadMore(query, pageToken) {
   if (gmailIsLoading || !gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   gmailIsLoading = true;
   try {
     const result = await gmailSearch(query, 8, pageToken);
@@ -564,7 +574,7 @@ async function gmailLoadMore(query, pageToken) {
     if (body) {
       for (let idx = 0; idx < result.emails.length; idx++) {
         const e = result.emails[idx];
-        const num = gmailTotalLoaded - result.emails.length + idx + 1;
+        const num = gmailTotalLoaded + idx + 1;
         const from = gmailEscHtml((e.from||'').replace(/<.*>/, '').trim() || e.from);
         body.insertAdjacentHTML('beforeend', `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
           <span class="gmail-email-idx">${num}/${gmailTotalFound}</span>
@@ -639,7 +649,7 @@ function gmailShowLabels(labels) {
 
 async function gmailRunSearch(query, title, max) {
   if (gmailIsLoading || !gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   gmailIsLoading = true;
   gmailShowLoading(title);
   try {
@@ -781,7 +791,7 @@ function gmailBuildExamples() {
 
 async function gmailExactCount() {
   if (!gmailAccessToken || !gmailLastQuery) { showToast('Search first', 1500); return; }
-  if (!(await gmailEnsureToken())) return;
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
 
   const statsEl = document.getElementById('resultsStats');
   if (statsEl) statsEl.textContent = 'Counting…';
@@ -815,20 +825,26 @@ async function gmailExactCount() {
 
 async function gmailExactCountBg(query) {
   if (!gmailAccessToken) return;
+  const myQuery = query; // capture for race check
   const statsEl = document.getElementById('resultsStats');
   let total = 0;
   let pageToken = null;
   try {
     do {
-      const p = { userId: 'me', q: query || '', maxResults: 500 };
+      // Abort if user started a new search
+      if (gmailLastQuery !== myQuery) return;
+      const p = { userId: 'me', q: myQuery || '', maxResults: 500 };
       if (pageToken) p.pageToken = pageToken;
       const r = await gapi.client.gmail.users.messages.list(p);
       total += (r.result.messages || []).length;
       pageToken = r.result.nextPageToken;
-      if (statsEl) statsEl.textContent = `counting… ${total}`;
+      if (gmailLastQuery === myQuery && statsEl) statsEl.textContent = `counting… ${total}`;
     } while (pageToken);
-    gmailTotalFound = total;
-    if (statsEl) statsEl.textContent = `${total} found · showing ${gmailTotalLoaded}`;
+    // Only update if this is still the active query
+    if (gmailLastQuery === myQuery) {
+      gmailTotalFound = total;
+      if (statsEl) statsEl.textContent = `${total} found · showing ${gmailTotalLoaded}`;
+    }
   } catch {}
 }
 
@@ -958,7 +974,7 @@ async function gmailExportAll(format) {
     return;
   }
 
-  if (!(await gmailEnsureToken())) return;
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
 
   const progressEl = document.getElementById('exportProgress');
   const fillEl = document.getElementById('exportFill');
@@ -1091,7 +1107,7 @@ async function gmailExportFull(format) {
   if (menu) menu.style.display = 'none';
 
   if (!gmailAccessToken) { log('❌ Not signed in', 'error'); return; }
-  if (!(await gmailEnsureToken())) return;
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
 
   // Use export progress from results header, or from Tools sidebar
   let progressEl = document.getElementById('exportProgress') || document.getElementById('exportAllProgress');
@@ -1344,7 +1360,7 @@ let isExtracting = false;
 
 async function gmailExtractContacts() {
   if (isExtracting || !gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
 
   isExtracting = true;
   const btn = document.getElementById('extractContactsBtn');
@@ -1492,8 +1508,8 @@ function insightDone() { insightRunning = false; }
 
 async function gmailBuildStats() {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
 
   const btn = document.getElementById('buildStatsBtn');
   const status = document.getElementById('statsStatus');
@@ -2003,8 +2019,8 @@ function exportAttachmentList() {
 
 async function gmailBuildWordCloud() {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const btn = document.getElementById('wordCloudBtn');
   const status = document.getElementById('wordCloudStatus');
   const container = document.getElementById('wordCloudContainer');
@@ -2057,8 +2073,8 @@ async function gmailBuildWordCloud() {
 
 async function gmailBuildDigest(period) {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const container = document.getElementById('digestContainer');
   if (!container) return;
   const now = new Date();
@@ -2108,7 +2124,8 @@ async function gmailBuildDigest(period) {
       </div>`;
     log(`📰 Digest (${periodLabel}): ${totalEmails} emails, ${unread} unread`, 'success');
     playSound('success');
-  } catch (e) { log('❌ ' + (e.message || ''), 'error'); container.innerHTML = ''; insightDone(); }
+  } catch (e) { log('❌ ' + (e.message || ''), 'error'); container.innerHTML = ''; }
+  insightDone();
 }
 
 /* ═══════ BULK CLIPBOARD ═══════ */
@@ -2134,8 +2151,8 @@ async function bulkCopy(type) {
 
 async function gmailAnalyzeSize() {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const btn = document.getElementById('sizeBtn');
   const status = document.getElementById('sizeStatus');
   const container = document.getElementById('sizeContainer');
@@ -2203,8 +2220,8 @@ async function gmailAnalyzeSize() {
 
 async function gmailCalcInboxScore() {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const btn = document.getElementById('scoreBtn');
   const container = document.getElementById('scoreContainer');
   if (btn) btn.disabled = true;
@@ -2339,7 +2356,7 @@ function updateShortcutScore() {
 
 async function gmailExportAllInbox(format) {
   if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
 
   const progressEl = document.getElementById('exportAllProgress');
   const fillEl = document.getElementById('exportAllFill');
@@ -2528,8 +2545,8 @@ function printEmail() {
 
 async function gmailBuildTimeline() {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const btn = document.getElementById('timelineBtn');
   const status = document.getElementById('timelineStatus');
   const container = document.getElementById('timelineContainer');
@@ -2608,8 +2625,8 @@ async function gmailBuildTimeline() {
 
 async function gmailBuildNetwork() {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const btn = document.getElementById('networkBtn');
   const container = document.getElementById('networkContainer');
   if (btn) btn.disabled = true;
@@ -2698,8 +2715,8 @@ async function gmailBuildNetwork() {
 
 async function gmailFindDuplicates() {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const btn = document.getElementById('dupeBtn');
   const status = document.getElementById('dupeStatus');
   const container = document.getElementById('dupeContainer');
@@ -2784,8 +2801,8 @@ async function gmailFindDuplicates() {
 
 async function gmailAutoCategorize() {
   if (!insightGuard()) return;
-  if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!gmailAccessToken) { insightDone(); return; }
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
   const btn = document.getElementById('catBtn');
   const status = document.getElementById('catStatus');
   const container = document.getElementById('catContainer');
@@ -2921,7 +2938,7 @@ async function gmailDiffEmails() {
   const container = document.getElementById('diffContainer');
   if (!id1 || !id2) { showToast('Enter two email IDs', 2000); return; }
   if (!gmailAccessToken) return;
-  if (!(await gmailEnsureToken())) return;
+  if (!(await gmailEnsureToken())) { insightDone(); return; }
 
   try {
     const [e1, e2] = await Promise.all([gmailReadMessage(id1), gmailReadMessage(id2)]);
