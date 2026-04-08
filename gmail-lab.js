@@ -511,19 +511,19 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
         <button class="gmail-export-btn" onclick="toggleExportMenu()">⬇️ Export</button>
         <div class="gmail-export-menu" id="exportMenu" style="display:none">
           <div class="gmail-export-group">
-            <div class="gmail-export-label">📋 Headers only — ${emails.length} on screen</div>
+            <div class="gmail-export-label" id="exportLabelLoaded">📋 Headers only — ${emails.length} on screen</div>
             <button onclick="gmailExportLoaded('csv')">CSV</button>
             <button onclick="gmailExportLoaded('json')">JSON</button>
             <button onclick="gmailExportLoaded('txt')">TXT</button>
           </div>
           <div class="gmail-export-group">
-            <div class="gmail-export-label">📋 Headers only — all ~${gmailTotalFound} results</div>
+            <div class="gmail-export-label" id="exportLabelAll">📋 Headers only — all ~${gmailTotalFound} results</div>
             <button onclick="gmailExportAll('csv')">CSV</button>
             <button onclick="gmailExportAll('json')">JSON</button>
             <button onclick="gmailExportAll('txt')">TXT</button>
           </div>
           <div class="gmail-export-group">
-            <div class="gmail-export-label">📄 Full email body — all ~${gmailTotalFound} (slower)</div>
+            <div class="gmail-export-label" id="exportLabelFull">📄 Full email body — all ~${gmailTotalFound} (slower)</div>
             <button onclick="gmailExportFull('csv')">CSV</button>
             <button onclick="gmailExportFull('json')">JSON</button>
             <button onclick="gmailExportFull('txt')">TXT</button>
@@ -601,6 +601,14 @@ async function gmailLoadMore(query, pageToken) {
       const num = el.textContent.split('/')[0].trim();
       el.textContent = `${num}/${gmailTotalFound || gmailTotalLoaded}`;
     });
+    // Update export labels
+    const elLoaded = document.getElementById('exportLabelLoaded');
+    const elAll2 = document.getElementById('exportLabelAll');
+    const elFull2 = document.getElementById('exportLabelFull');
+    const t = gmailTotalFound || gmailTotalLoaded;
+    if (elLoaded) elLoaded.textContent = `📋 Headers only — ${gmailTotalLoaded} on screen`;
+    if (elAll2) elAll2.textContent = `📋 Headers only — all ${t} results`;
+    if (elFull2) elFull2.textContent = `📄 Full email body — all ${t} (slower)`;
     log(`📊 showing ${gmailTotalLoaded} of ${gmailTotalFound}`, 'info');
     playSound('success');
   } catch (e) {
@@ -857,6 +865,11 @@ async function gmailExactCountBg(query) {
         const num = el.textContent.split('/')[0].trim();
         el.textContent = `${num}/${total}`;
       });
+      // Update export labels
+      const elAll = document.getElementById('exportLabelAll');
+      const elFull = document.getElementById('exportLabelFull');
+      if (elAll) elAll.textContent = `📋 Headers only — all ${total} results`;
+      if (elFull) elFull.textContent = `📄 Full email body — all ${total} (slower)`;
     }
   } catch {}
 }
