@@ -535,7 +535,7 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
       const e = emails[idx];
       const from = gmailEscHtml((e.from||'').replace(/<.*>/, '').trim() || e.from);
       html += `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
-        <span class="gmail-email-idx">${idx + 1}/${gmailTotalFound || emails.length}</span>
+        <span class="gmail-email-idx">${idx + 1}/${totalEstimate || emails.length}</span>
         <div class="gmail-email-from">${from}</div>
         <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
         <div class="gmail-email-snippet">${gmailEscHtml(e.snippet)}</div>
