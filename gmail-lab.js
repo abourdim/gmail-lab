@@ -545,7 +545,7 @@ function gmailShowEmailList(title, emails, query, nextPageToken, totalEstimate) 
       const e = emails[idx];
       const from = gmailEscHtml((e.from||'').replace(/<.*>/, '').trim() || e.from);
       html += `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
-        <span class="gmail-email-idx">${idx + 1}/${totalEstimate || emails.length}</span>
+        <span class="gmail-email-idx">${idx + 1}</span>
         <div class="gmail-email-from">${from}</div>
         <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
         <div class="gmail-email-snippet">${gmailEscHtml(e.snippet)}</div>
@@ -577,7 +577,7 @@ async function gmailLoadMore(query, pageToken) {
         const num = gmailTotalLoaded + idx + 1;
         const from = gmailEscHtml((e.from||'').replace(/<.*>/, '').trim() || e.from);
         body.insertAdjacentHTML('beforeend', `<div class="gmail-email ${e.unread ? 'unread' : ''}" onclick="gmailHandleRead('${e.id}')">
-          <span class="gmail-email-idx">${num}/${gmailTotalFound}</span>
+          <span class="gmail-email-idx">${num}</span>
           <div class="gmail-email-from">${from}</div>
           <div class="gmail-email-subject">${gmailEscHtml(e.subject || '(no subject)')}</div>
           <div class="gmail-email-snippet">${gmailEscHtml(e.snippet)}</div>
@@ -844,10 +844,10 @@ async function gmailExactCountBg(query) {
     if (gmailLastQuery === myQuery) {
       gmailTotalFound = total;
       if (statsEl) statsEl.textContent = `${total} found · showing ${gmailTotalLoaded}`;
-      // Update all email index badges with correct total
+      // Update all email index badges with exact total
       document.querySelectorAll('.gmail-email-idx').forEach(el => {
-        const parts = el.textContent.split('/');
-        if (parts.length === 2) el.textContent = `${parts[0]}/${total}`;
+        const num = el.textContent.split('/')[0].trim();
+        el.textContent = `${num}/${total}`;
       });
     }
   } catch {}
