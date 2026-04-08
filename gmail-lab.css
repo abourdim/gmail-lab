@@ -602,6 +602,10 @@
 }
 .gmail-reply-btn:hover { background: var(--accent); color: #fff; }
 
+/* ═══ COMPACT AUTH ═══ */
+.gmail-auth-connected .card-header { display: none; }
+.gmail-auth-connected #authBody { padding: 8px 14px !important; }
+
 /* ═══ EMAIL INDEX ═══ */
 .gmail-email-idx {
   float: inline-end; font-size: 0.62rem; color: var(--text-muted); opacity: 0.4;

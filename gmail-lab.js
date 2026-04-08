@@ -132,18 +132,15 @@ function gmailRenderAuth() {
     card.classList.add('gmail-auth-connected');
     const initial = (gmailUserProfile.name || gmailUserProfile.email || '?')[0].toUpperCase();
     body.innerHTML = `
-      <div class="gmail-profile-row">
+      <div class="gmail-profile-row" style="align-items:center">
         ${gmailUserProfile.picture
-          ? `<img class="gmail-avatar" src="${gmailUserProfile.picture}" alt="avatar"/>`
-          : `<div class="gmail-avatar-placeholder">${initial}</div>`}
-        <div class="gmail-profile-info">
-          <div class="gmail-profile-name">${gmailEscHtml(gmailUserProfile.name || 'Gmail User')}</div>
-          <div class="gmail-profile-email">${gmailEscHtml(gmailUserProfile.email)}</div>
-          <div class="gmail-profile-stats" id="gmailStats">Loading stats…</div>
+          ? `<img class="gmail-avatar" src="${gmailUserProfile.picture}" alt="avatar" style="width:28px;height:28px"/>`
+          : `<div class="gmail-avatar-placeholder" style="width:28px;height:28px;font-size:0.75rem">${initial}</div>`}
+        <div class="gmail-profile-info" style="flex:1;min-width:0">
+          <span class="gmail-profile-name" style="font-size:0.85rem">${gmailEscHtml(gmailUserProfile.name || 'Gmail User')}</span>
+          <span class="gmail-profile-stats" id="gmailStats" style="font-size:0.72rem;opacity:0.6">…</span>
         </div>
-      </div>
-      <div style="margin-top:0.6rem;text-align:right">
-        <button class="gmail-signout-btn" onclick="gmailSignOut()">Sign Out</button>
+        <button class="gmail-signout-btn" onclick="gmailSignOut()" style="font-size:0.7rem;padding:3px 10px">Sign Out</button>
       </div>
     `;
     setStatus(true);
