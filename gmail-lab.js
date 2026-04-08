@@ -844,6 +844,11 @@ async function gmailExactCountBg(query) {
     if (gmailLastQuery === myQuery) {
       gmailTotalFound = total;
       if (statsEl) statsEl.textContent = `${total} found · showing ${gmailTotalLoaded}`;
+      // Update all email index badges with correct total
+      document.querySelectorAll('.gmail-email-idx').forEach(el => {
+        const parts = el.textContent.split('/');
+        if (parts.length === 2) el.textContent = `${parts[0]}/${total}`;
+      });
     }
   } catch {}
 }
